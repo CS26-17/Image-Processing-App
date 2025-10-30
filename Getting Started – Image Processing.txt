@@ -1,0 +1,16 @@
+Getting Started – Image Processing App
+
+1.Clone & Open:
+
+	git clone https://github.com/CS26-17/Image-Processing-App.git 
+	cd Image-Processing-App 
+	code .
+
+-----------------------------------------------
+
+2.Run Setup:
+	Mac:
+	chmod +x setup_dev_env_simple.sh 
+	./setup_dev_env.sh
+	Windows:
+	setup_dev_env.bat
