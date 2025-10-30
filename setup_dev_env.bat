@@ -20,7 +20,7 @@ echo Setup complete
 echo.
 echo To start developing:
 echo   1. Activate environment: venv\Scripts\activate
-echo   2. Run app: python image_difference_app.py
+echo   2. Run app: python xxx.py
 echo   3. Open in VS Code: code .
 echo.
 pause
