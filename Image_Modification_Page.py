@@ -4,16 +4,16 @@ Simple image editing capabilities for the Image Processing App
 """
 
 import sys
-from PySide6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLabel, QSlider, QGroupBox, QGridLayout,
                                QFileDialog, QMessageBox, QSpinBox, QComboBox)
-from PySide6.QtCore import Qt, QThread, Signal as pyqtSignal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QPixmap, QImage
 from PIL import Image, ImageEnhance, ImageFilter
 import numpy as np
 
 
-class ImageModificationPage(QMainWindow):
+class ImageModificationPage(QWidget):
     """
     Image modification page for editing single images.
     Features: Rotate, Flip, Resize, Crop, Brightness, Contrast, Filters
@@ -37,15 +37,8 @@ class ImageModificationPage(QMainWindow):
     
     def init_ui(self):
         """Initialize the user interface"""
-        self.setWindowTitle("Image Modification")
-        self.setGeometry(100, 100, 1400, 900)
-        
-        # Central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
         # Main layout
-        main_layout = QHBoxLayout(central_widget)
+        main_layout = QHBoxLayout(self)
         
         # Left side - Controls
         controls_layout = QVBoxLayout()
@@ -101,12 +94,23 @@ class ImageModificationPage(QMainWindow):
         self.image_label.setScaledContents(False)
         image_layout.addWidget(self.image_label)
         
+        # Status label
+        self.status_label = QLabel("Ready")
+        self.status_label.setStyleSheet("""
+            QLabel {
+                padding: 8px;
+                background-color: #e3f2fd;
+                border: 1px solid #90caf9;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #1976d2;
+            }
+        """)
+        image_layout.addWidget(self.status_label)
+        
         # Add layouts to main layout
         main_layout.addLayout(controls_layout, 1)
         main_layout.addLayout(image_layout, 3)
-        
-        # Status bar
-        self.statusBar().showMessage("Ready")
     
     def create_file_group(self):
         """Create file operations group"""
@@ -321,7 +325,7 @@ class ImageModificationPage(QMainWindow):
             # Update display
             self.display_image(self.current_image)
             self.update_info()
-            self.statusBar().showMessage(f"Loaded: {image_path}")
+            self.status_label.setText(f"Loaded: {image_path}")
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load image: {str(e)}")
@@ -388,7 +392,7 @@ class ImageModificationPage(QMainWindow):
             self.add_to_history(self.current_image)
             self.display_image(self.current_image)
             self.update_info()
-            self.statusBar().showMessage(f"Rotated {degrees}°")
+            self.status_label.setText(f"Rotated {degrees}°")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to rotate: {str(e)}")
     
@@ -402,7 +406,7 @@ class ImageModificationPage(QMainWindow):
             self.current_image = flipped
             self.add_to_history(self.current_image)
             self.display_image(self.current_image)
-            self.statusBar().showMessage("Flipped horizontally")
+            self.status_label.setText("Flipped horizontally")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to flip: {str(e)}")
     
@@ -416,7 +420,7 @@ class ImageModificationPage(QMainWindow):
             self.current_image = flipped
             self.add_to_history(self.current_image)
             self.display_image(self.current_image)
-            self.statusBar().showMessage("Flipped vertically")
+            self.status_label.setText("Flipped vertically")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to flip: {str(e)}")
     
@@ -454,7 +458,7 @@ class ImageModificationPage(QMainWindow):
             self.modified_image = preview
             
         except Exception as e:
-            self.statusBar().showMessage(f"Preview error: {str(e)}")
+            self.status_label.setText(f"Preview error: {str(e)}")
     
     def apply_adjustments(self):
         """Apply current adjustments permanently"""
@@ -467,9 +471,9 @@ class ImageModificationPage(QMainWindow):
             self.contrast_slider.setValue(100)
             self.sharpness_slider.setValue(100)
             
-            self.statusBar().showMessage("Adjustments applied")
+            self.status_label.setText("Adjustments applied")
         else:
-            self.statusBar().showMessage("No adjustments to apply")
+            self.status_label.setText("No adjustments to apply")
     
     def apply_filter(self):
         """Apply selected filter"""
@@ -500,7 +504,7 @@ class ImageModificationPage(QMainWindow):
             self.current_image = filtered
             self.add_to_history(self.current_image)
             self.display_image(self.current_image)
-            self.statusBar().showMessage(f"Applied {filter_name} filter")
+            self.status_label.setText(f"Applied {filter_name} filter")
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to apply filter: {str(e)}")
@@ -519,7 +523,7 @@ class ImageModificationPage(QMainWindow):
             self.add_to_history(self.current_image)
             self.display_image(self.current_image)
             self.update_info()
-            self.statusBar().showMessage(f"Resized to {new_width}x{new_height}")
+            self.status_label.setText(f"Resized to {new_width}x{new_height}")
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to resize: {str(e)}")
@@ -531,9 +535,9 @@ class ImageModificationPage(QMainWindow):
             self.current_image = self.history[self.history_index].copy()
             self.display_image(self.current_image)
             self.update_info()
-            self.statusBar().showMessage("Undo")
+            self.status_label.setText("Undo")
         else:
-            self.statusBar().showMessage("Nothing to undo")
+            self.status_label.setText("Nothing to undo")
     
     def redo(self):
         """Redo last undone modification"""
@@ -542,9 +546,9 @@ class ImageModificationPage(QMainWindow):
             self.current_image = self.history[self.history_index].copy()
             self.display_image(self.current_image)
             self.update_info()
-            self.statusBar().showMessage("Redo")
+            self.status_label.setText("Redo")
         else:
-            self.statusBar().showMessage("Nothing to redo")
+            self.status_label.setText("Nothing to redo")
     
     def reset_to_original(self):
         """Reset image to original"""
@@ -568,7 +572,7 @@ class ImageModificationPage(QMainWindow):
                 
                 self.display_image(self.current_image)
                 self.update_info()
-                self.statusBar().showMessage("Reset to original")
+                self.status_label.setText("Reset to original")
     
     def save_image(self):
         """Save current image"""
@@ -586,7 +590,7 @@ class ImageModificationPage(QMainWindow):
         if file_path:
             try:
                 self.current_image.save(file_path)
-                self.statusBar().showMessage(f"Saved: {file_path}")
+                self.status_label.setText(f"Saved: {file_path}")
                 QMessageBox.information(self, "Success", f"Image saved to:\n{file_path}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to save image: {str(e)}")
@@ -598,10 +602,14 @@ class ImageModificationPage(QMainWindow):
 
 def main():
     """Test the image modification page standalone"""
-    from PySide6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication, QMainWindow
     
     app = QApplication(sys.argv)
-    window = ImageModificationPage()
+    window = QMainWindow()
+    window.setWindowTitle("Image Modification Test")
+    window.setGeometry(100, 100, 1400, 900)
+    mod_page = ImageModificationPage()
+    window.setCentralWidget(mod_page)
     window.show()
     sys.exit(app.exec())
 
