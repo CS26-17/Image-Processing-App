@@ -1,10 +1,11 @@
 import sys
 import os
-from PyQt5.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout, 
-                             QWidget, QLabel, QTabWidget, QFileDialog, QHBoxLayout,
-                             QFrame, QSizePolicy)
-from PyQt5.QtGui import QPixmap, QDragEnterEvent, QDropEvent
-from PyQt5.QtCore import Qt, QMimeData
+from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayout, 
+                               QWidget, QLabel, QTabWidget, QFileDialog, QHBoxLayout,
+                               QFrame, QSizePolicy, QGroupBox)
+from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Qt, QMimeData
+from Image_Modification_Page import ImageModificationPage
 
 class ImageProcessingApp(QMainWindow):
     """
@@ -15,7 +16,7 @@ class ImageProcessingApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Image Processing App")
-        self.setGeometry(100, 100, 800, 600)  # Increased window size for better layout
+        self.setGeometry(100, 100, 1400, 900)  # Larger window size for better layout
         
         # Enable drag and drop functionality
         self.setAcceptDrops(True)
@@ -62,171 +63,86 @@ class ImageProcessingApp(QMainWindow):
     def setup_home_tab(self):
         """Setup the home tab with image upload and display functionality"""
         home_widget = QWidget()
-        layout = QVBoxLayout(home_widget)
-        layout.setSpacing(20)
-        layout.setContentsMargins(30, 30, 30, 30)  # Add margins around the layout
+        main_layout = QHBoxLayout(home_widget)
+        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setSpacing(10)
         
-        # Application title
-        title_label = QLabel("Image Processing Application")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title_label.setStyleSheet("""
-            QLabel {
-                font-size: 24px;
-                font-weight: bold;
-                color: #2c3e50;
-                margin: 20px;
-                padding: 10px;
-            }
-        """)
-        layout.addWidget(title_label)
+        # Left side - Control panel
+        controls_layout = QVBoxLayout()
+        controls_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        controls_layout.setSpacing(10)
         
-        # Instructions label
-        instructions_label = QLabel("Upload an image to get started with processing")
-        instructions_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        instructions_label.setStyleSheet("""
-            QLabel {
-                font-size: 14px;
-                color: #7f8c8d;
-                margin-bottom: 20px;
-            }
-        """)
-        layout.addWidget(instructions_label)
+        # Image info label
+        self.info_label = QLabel("No image loaded")
+        self.info_label.setStyleSheet("font-size: 14px; padding: 10px;")
+        controls_layout.addWidget(self.info_label)
         
-        # Image display area with styled frame
-        image_frame = QFrame()
-        image_frame.setFrameStyle(QFrame.Box)
-        image_frame.setStyleSheet("""
-            QFrame {
-                border: 3px dashed #bdc3c7;
-                border-radius: 10px;
-                background-color: #fafafa;
-                min-height: 300px;
-            }
-        """)
-        image_layout = QVBoxLayout(image_frame)
+        # File operations group
+        file_group = QGroupBox("File Operations")
+        file_layout = QVBoxLayout()
         
-        self.image_label = QLabel()
+        self.upload_button = QPushButton("📁 Upload Image")
+        self.upload_button.setStyleSheet("padding: 8px; font-size: 12px;")
+        self.upload_button.clicked.connect(self.upload_image)
+        file_layout.addWidget(self.upload_button)
+        
+        self.clear_button = QPushButton("🗑️ Clear Image")
+        self.clear_button.setStyleSheet("padding: 8px; font-size: 12px;")
+        self.clear_button.clicked.connect(self.clear_image)
+        file_layout.addWidget(self.clear_button)
+        
+        file_group.setLayout(file_layout)
+        controls_layout.addWidget(file_group)
+        
+        # Processing group
+        process_group = QGroupBox("Processing")
+        process_layout = QVBoxLayout()
+        
+        self.process_button = QPushButton("⚡ Process Image")
+        self.process_button.setStyleSheet("padding: 8px; font-size: 12px; background-color: #4CAF50; color: white;")
+        self.process_button.clicked.connect(self.process_image)
+        process_layout.addWidget(self.process_button)
+        
+        process_group.setLayout(process_layout)
+        controls_layout.addWidget(process_group)
+        
+        controls_layout.addStretch()
+        
+        # Right side - Image display
+        image_layout = QVBoxLayout()
+        
+        self.image_label = QLabel("Drag & drop an image here\nor click the upload button")
         self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setStyleSheet("""
             QLabel {
-                color: #95a5a6;
-                font-size: 16px;
-                padding: 40px;
-                qproperty-wordWrap: true;
+                border: 2px dashed #cccccc;
+                border-radius: 10px;
+                background-color: #f5f5f5;
+                min-width: 800px;
+                min-height: 600px;
+                color: #999999;
             }
         """)
-        self.image_label.setText("Drag & drop an image here\nor click the upload button below")
-        self.image_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.image_label.setScaledContents(False)
         image_layout.addWidget(self.image_label)
         
-        layout.addWidget(image_frame)
-        
-        # Status label to show current state
+        # Status label
         self.status_label = QLabel("Ready to process images")
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setStyleSheet("""
             QLabel {
-                font-size: 14px;
-                color: #34495e;
-                margin: 10px;
-                padding: 12px;
-                background-color: #e8f4fd;
-                border-radius: 6px;
-                border: 1px solid #b3d9ff;
+                padding: 8px;
+                background-color: #e3f2fd;
+                border: 1px solid #90caf9;
+                border-radius: 4px;
+                font-size: 12px;
+                color: #1976d2;
             }
         """)
-        layout.addWidget(self.status_label)
+        image_layout.addWidget(self.status_label)
         
-        # Button layout with multiple action buttons
-        button_layout = QHBoxLayout()
-        button_layout.setSpacing(15)
-        
-        # Upload Image Button
-        self.upload_button = QPushButton("📁 Upload Image")
-        self.upload_button.setStyleSheet("""
-            QPushButton {
-                font-size: 14px;
-                font-weight: bold;
-                padding: 12px 24px;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                min-width: 150px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        self.upload_button.clicked.connect(self.upload_image)
-        
-        # Process Image Button
-        self.process_button = QPushButton("⚡ Process Image")
-        self.process_button.setStyleSheet("""
-            QPushButton {
-                font-size: 14px;
-                font-weight: bold;
-                padding: 12px 24px;
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                min-width: 150px;
-            }
-            QPushButton:hover {
-                background-color: #0b7dda;
-            }
-            QPushButton:pressed {
-                background-color: #0a6ebd;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        self.process_button.clicked.connect(self.process_image)
-        
-        # Clear Button
-        self.clear_button = QPushButton("🗑️ Clear Image")
-        self.clear_button.setStyleSheet("""
-            QPushButton {
-                font-size: 14px;
-                font-weight: bold;
-                padding: 12px 24px;
-                background-color: #ff9800;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                min-width: 150px;
-            }
-            QPushButton:hover {
-                background-color: #e68900;
-            }
-            QPushButton:pressed {
-                background-color: #d17a00;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
-        self.clear_button.clicked.connect(self.clear_image)
-        
-        # Add buttons to layout
-        button_layout.addWidget(self.upload_button)
-        button_layout.addWidget(self.process_button)
-        button_layout.addWidget(self.clear_button)
-        button_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
-        layout.addLayout(button_layout)
-        layout.addStretch()
+        # Add layouts to main layout
+        main_layout.addLayout(controls_layout, 1)
+        main_layout.addLayout(image_layout, 3)
         
         # Add home tab to tab widget
         self.tab_widget.addTab(home_widget, "🏠 Home")
@@ -280,28 +196,9 @@ class ImageProcessingApp(QMainWindow):
         docs_layout.addStretch()
         self.tab_widget.addTab(docs_widget, "📚 Documentation")
         
-        # Modification Tab
-        mod_widget = QWidget()
-        mod_layout = QVBoxLayout(mod_widget)
-        mod_layout.setContentsMargins(30, 30, 30, 30)
-        
-        mod_label = QLabel("Image Modification Tools")
-        mod_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        mod_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #2c3e50; margin: 20px;")
-        mod_layout.addWidget(mod_label)
-        
-        mod_content = QLabel("Advanced image editing and modification tools.\n\n"
-                           "• Filters and effects\n"
-                           "• Color adjustment\n"
-                           "• Crop and resize\n"
-                           "• Batch processing")
-        mod_content.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        mod_content.setStyleSheet("font-size: 14px; color: #7f8c8d; margin: 20px;")
-        mod_content.setWordWrap(True)
-        mod_layout.addWidget(mod_content)
-        
-        mod_layout.addStretch()
-        self.tab_widget.addTab(mod_widget, "🛠️ Modification")
+        # Modification Tab - Actual image modification page
+        self.modification_page = ImageModificationPage(parent=self)
+        self.tab_widget.addTab(self.modification_page, "🛠️ Modification")
         
         # Analysis Setup Tab
         analysis_widget = QWidget()
@@ -335,36 +232,43 @@ class ImageProcessingApp(QMainWindow):
                 # Visual feedback for valid drag
                 self.image_label.setStyleSheet("""
                     QLabel {
+                        border: 2px dashed #4CAF50;
+                        border-radius: 10px;
+                        background-color: #e8f5e9;
+                        min-width: 800px;
+                        min-height: 600px;
                         color: #4CAF50;
-                        font-size: 16px;
-                        padding: 40px;
-                        qproperty-wordWrap: true;
+                        font-weight: bold;
                     }
                 """)
-                self.image_label.setText("Release to upload image")
-                self.status_label.setText("Ready to drop image - Release mouse button")
+                self.image_label.setText("✓ Release to upload image")
+                self.status_label.setText("Ready to drop image")
     
     def dragLeaveEvent(self, event):
         """Handle drag leave event - reset visual feedback"""
         self.image_label.setStyleSheet("""
             QLabel {
-                color: #95a5a6;
-                font-size: 16px;
-                padding: 40px;
-                qproperty-wordWrap: true;
+                border: 2px dashed #cccccc;
+                border-radius: 10px;
+                background-color: #f5f5f5;
+                min-width: 800px;
+                min-height: 600px;
+                color: #999999;
             }
         """)
-        self.image_label.setText("Drag & drop an image here\nor click the upload button below")
+        self.image_label.setText("Drag & drop an image here\nor click the upload button")
         self.status_label.setText("Ready to process images")
     
     def dropEvent(self, event: QDropEvent):
         """Handle drop event - process dropped image files"""
         self.image_label.setStyleSheet("""
             QLabel {
-                color: #95a5a6;
-                font-size: 16px;
-                padding: 40px;
-                qproperty-wordWrap: true;
+                border: 2px dashed #cccccc;
+                border-radius: 10px;
+                background-color: #f5f5f5;
+                min-width: 800px;
+                min-height: 600px;
+                color: #999999;
             }
         """)
         self.image_label.setText("Processing image...")
@@ -378,7 +282,7 @@ class ImageProcessingApp(QMainWindow):
         else:
             # No valid image files found
             self.status_label.setText("Please drop a valid image file (PNG, JPG, JPEG, GIF, BMP, TIFF, WEBP)")
-            self.image_label.setText("Drag & drop an image here\nor click the upload button below")
+            self.image_label.setText("Drag & drop an image here\nor click the upload button")
     
     def is_image_file(self, file_path):
         """Check if file is a supported image format"""
@@ -403,12 +307,12 @@ class ImageProcessingApp(QMainWindow):
             pixmap = QPixmap(file_path)
             if pixmap.isNull():
                 self.status_label.setText("Error: Unable to load image file")
-                self.image_label.setText("Drag & drop an image here\nor click the upload button below")
+                self.image_label.setText("Drag & drop an image here\nor click the upload button")
                 return
             
             # Scale image to fit display area while maintaining aspect ratio
             scaled_pixmap = pixmap.scaled(
-                400, 300, 
+                self.image_label.size(), 
                 Qt.AspectRatioMode.KeepAspectRatio, 
                 Qt.TransformationMode.SmoothTransformation
             )
@@ -417,25 +321,36 @@ class ImageProcessingApp(QMainWindow):
             self.image_label.setPixmap(scaled_pixmap)
             self.current_image_path = file_path
             file_name = os.path.basename(file_path)
+            
+            # Update info label with image details
+            img_width = pixmap.width()
+            img_height = pixmap.height()
+            file_size = os.path.getsize(file_path) / 1024  # KB
+            self.info_label.setText(f"File: {file_name}\nSize: {img_width}x{img_height}\nFile Size: {file_size:.1f} KB")
+            
             self.status_label.setText(f"Image loaded successfully: {file_name}")
             
         except Exception as e:
             self.status_label.setText(f"Error loading image: {str(e)}")
-            self.image_label.setText("Drag & drop an image here\nor click the upload button below")
+            self.image_label.setText("Drag & drop an image here\nor click the upload button")
     
     def clear_image(self):
         """Clear the currently displayed image"""
         self.image_label.clear()
-        self.image_label.setText("Drag & drop an image here\nor click the upload button below")
+        self.image_label.setText("Drag & drop an image here\nor click the upload button")
         self.current_image_path = None
+        self.info_label.setText("No image loaded")
         self.status_label.setText("Ready to process images")
     
     def process_image(self):
-        """Process the current image (placeholder functionality)"""
+        """Process the current image - load it in modification tab"""
         if self.current_image_path:
             file_name = os.path.basename(self.current_image_path)
-            self.status_label.setText(f"Processing image: {file_name}")
-            # TODO: Add actual image processing logic here
+            # Load the image in the modification page
+            self.modification_page.load_image(self.current_image_path)
+            # Switch to the modification tab
+            self.tab_widget.setCurrentWidget(self.modification_page)
+            self.status_label.setText(f"Loaded {file_name} in Modification tab")
         else:
             self.status_label.setText("Please upload an image first")
 
@@ -453,7 +368,7 @@ def main():
     window.show()
     
     # Start event loop
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
