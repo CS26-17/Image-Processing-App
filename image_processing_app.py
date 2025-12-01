@@ -6,6 +6,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayo
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 from PySide6.QtCore import Qt, QMimeData
 from Image_Modification_Page import ImageModificationPage
+from tabs.results_tab import ResultsTab
 
 class ImageProcessingApp(QMainWindow):
     """
@@ -151,27 +152,8 @@ class ImageProcessingApp(QMainWindow):
         """Setup placeholder tabs for future functionality"""
         
         # Results Tab
-        results_widget = QWidget()
-        results_layout = QVBoxLayout(results_widget)
-        results_layout.setContentsMargins(30, 30, 30, 30)
-        
-        results_label = QLabel("Processing Results")
-        results_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        results_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #2c3e50; margin: 20px;")
-        results_layout.addWidget(results_label)
-        
-        results_content = QLabel("Processing results and analysis data will be displayed here.\n\n"
-                               "• Image statistics\n"
-                               "• Processing history\n"
-                               "• Export options\n"
-                               "• Comparison views")
-        results_content.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        results_content.setStyleSheet("font-size: 14px; color: #7f8c8d; margin: 20px;")
-        results_content.setWordWrap(True)
-        results_layout.addWidget(results_content)
-        
-        results_layout.addStretch()
-        self.tab_widget.addTab(results_widget, "📊 Results")
+        self.results_tab = ResultsTab()
+        self.tab_widget.addTab(self.results_tab, "📊 Results")
         
         # Documentation Tab
         docs_widget = QWidget()
