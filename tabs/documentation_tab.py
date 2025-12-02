@@ -3,11 +3,12 @@ Documentation Tab - Application documentation and user guide
 """
 
 import os
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
+from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QTextBrowser, QPushButton, QFrame, QScrollArea,
-                             QSplitter, QListWidget, QListWidgetItem, QFileDialog)
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtGui import QFont, QDesktopServices
+                             QSplitter, QListWidget, QListWidgetItem, QFileDialog,
+                             QMessageBox)
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QFont, QDesktopServices
 
 
 class DocumentationTab(QWidget):
@@ -26,7 +27,7 @@ class DocumentationTab(QWidget):
         main_layout.setContentsMargins(10, 10, 10, 10)
         
         # Create splitter for navigation and content
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         
         # Left side - Navigation
         self.nav_frame = QFrame()
@@ -43,9 +44,9 @@ class DocumentationTab(QWidget):
         
         # Navigation header
         nav_header = QLabel("Documentation")
-        nav_header.setFont(QFont("Arial", 14, QFont.Bold))
+        nav_header.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         nav_header.setStyleSheet("color: #000000; padding: 15px; border-bottom: 1px solid #dee2e6;")
-        nav_header.setAlignment(Qt.AlignCenter)
+        nav_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
         nav_layout.addWidget(nav_header)
         
         # Navigation list
@@ -218,7 +219,6 @@ class DocumentationTab(QWidget):
     def download_user_manual(self):
         """Handle PDF manual download"""
         # For now, show a message. You can replace this with actual PDF generation
-        from PyQt5.QtWidgets import QMessageBox
         QMessageBox.information(self, "Download", 
                                "User manual PDF download functionality will be implemented soon.\n\n"
                                "For now, please refer to the online documentation above.")
