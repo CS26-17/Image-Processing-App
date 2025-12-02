@@ -155,28 +155,9 @@ class ImageProcessingApp(QMainWindow):
         self.results_tab = ResultsTab()
         self.tab_widget.addTab(self.results_tab, "📊 Results")
         
-        # Documentation Tab
-        docs_widget = QWidget()
-        docs_layout = QVBoxLayout(docs_widget)
-        docs_layout.setContentsMargins(30, 30, 30, 30)
-        
-        docs_label = QLabel("Application Documentation")
-        docs_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        docs_label.setStyleSheet("font-size: 20px; font-weight: bold; color: #2c3e50; margin: 20px;")
-        docs_layout.addWidget(docs_label)
-        
-        docs_content = QLabel("User guide and application documentation.\n\n"
-                            "• How to use features\n"
-                            "• Troubleshooting guide\n"
-                            "• Keyboard shortcuts\n"
-                            "• API documentation")
-        docs_content.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        docs_content.setStyleSheet("font-size: 14px; color: #7f8c8d; margin: 20px;")
-        docs_content.setWordWrap(True)
-        docs_layout.addWidget(docs_content)
-        
-        docs_layout.addStretch()
-        self.tab_widget.addTab(docs_widget, "📚 Documentation")
+        # Documentation Tab - use the real DocumentationTab
+        self.docs_tab = DocumentationTab(parent=self) 
+        self.tab_widget.addTab(self.docs_tab, "📚 Documentation")
         
         # Modification Tab - Actual image modification page
         self.modification_page = ImageModificationPage(parent=self)
