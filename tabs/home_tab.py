@@ -3,10 +3,12 @@ Home Tab - Main image upload and display functionality
 """
 
 import os
-from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QLabel, QHBoxLayout,
-                             QFrame, QSizePolicy, QPushButton, QFileDialog)
-from PyQt5.QtGui import QPixmap, QDragEnterEvent, QDropEvent
-from PyQt5.QtCore import Qt
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QLabel, QHBoxLayout,
+    QFrame, QSizePolicy, QPushButton, QFileDialog
+)
+from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Qt
 
 
 class HomeTab(QWidget):
