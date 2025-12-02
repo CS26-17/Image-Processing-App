@@ -7,6 +7,7 @@ from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 from PySide6.QtCore import Qt, QMimeData
 from tabs.Image_Modification_Page import ImageModificationPage
 from tabs.results_tab import ResultsTab
+from tabs.documentation_tab import DocumentationTab
 
 class ImageProcessingApp(QMainWindow):
     """
