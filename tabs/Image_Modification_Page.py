@@ -117,10 +117,11 @@ class ImageModificationPage(QWidget):
         group = QGroupBox("File Operations")
         layout = QVBoxLayout()
         
-        load_btn = QPushButton("Load Image")
-        load_btn.clicked.connect(self.load_image_dialog)
-        load_btn.setStyleSheet("padding: 8px; font-size: 12px;")
-        layout.addWidget(load_btn)
+        
+        # load_btn = QPushButton("Load Image")
+        # load_btn.clicked.connect(self.load_image_dialog)
+        # load_btn.setStyleSheet("padding: 8px; font-size: 12px;")
+        # layout.addWidget(load_btn)
         
         save_btn = QPushButton("Save Image")
         save_btn.clicked.connect(self.save_image)

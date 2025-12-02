@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QPushButton, QVBoxLayo
                                QFrame, QSizePolicy, QGroupBox)
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 from PySide6.QtCore import Qt, QMimeData
-from Image_Modification_Page import ImageModificationPage
+from tabs.Image_Modification_Page import ImageModificationPage
 from tabs.results_tab import ResultsTab
 
 class ImageProcessingApp(QMainWindow):
