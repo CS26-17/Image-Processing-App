@@ -2,8 +2,8 @@
 Modification Tab - Image modification and editing tools
 """
 
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PyQt6.QtCore import Qt
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PySide6.QtCore import Qt
 
 
 class ModificationTab(QWidget):
