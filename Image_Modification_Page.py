@@ -26,6 +26,9 @@ class ImageModificationPage(QWidget):
         self.current_image = None
         self.modified_image = None
         
+        # Maximum display size for consistent scaling
+        self.max_display_size = (800, 600)
+        
         # Modification history for undo
         self.history = []
         self.history_index = -1
@@ -168,7 +171,12 @@ class ImageModificationPage(QWidget):
         
         # Brightness
         brightness_label = QLabel("Brightness:")
-        brightness_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        brightness_label.setStyleSheet("""
+            font-weight: bold; 
+            font-size: 13px; 
+            color: #2c3e50;
+            padding: 5px 0px 2px 0px;
+        """)
         layout.addWidget(brightness_label)
         
         brightness_layout = QHBoxLayout()
@@ -187,7 +195,12 @@ class ImageModificationPage(QWidget):
         
         # Contrast
         contrast_label = QLabel("Contrast:")
-        contrast_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        contrast_label.setStyleSheet("""
+            font-weight: bold; 
+            font-size: 13px; 
+            color: #2c3e50;
+            padding: 8px 0px 2px 0px;
+        """)
         layout.addWidget(contrast_label)
         
         contrast_layout = QHBoxLayout()
@@ -206,7 +219,12 @@ class ImageModificationPage(QWidget):
         
         # Sharpness
         sharpness_label = QLabel("Sharpness:")
-        sharpness_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        sharpness_label.setStyleSheet("""
+            font-weight: bold; 
+            font-size: 13px; 
+            color: #2c3e50;
+            padding: 8px 0px 2px 0px;
+        """)
         layout.addWidget(sharpness_label)
         
         sharpness_layout = QHBoxLayout()
@@ -360,9 +378,12 @@ class ImageModificationPage(QWidget):
         q_image = QImage(img_array.data, width, height, bytes_per_line, QImage.Format.Format_RGB888)
         pixmap = QPixmap.fromImage(q_image)
         
-        # Scale to fit label while maintaining aspect ratio
+        # Scale to fit max display size while maintaining aspect ratio
+        # Use consistent size to prevent image jumping during preview
+        from PySide6.QtCore import QSize
+        max_size = QSize(self.max_display_size[0], self.max_display_size[1])
         scaled_pixmap = pixmap.scaled(
-            self.image_label.size(),
+            max_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
