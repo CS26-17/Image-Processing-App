@@ -167,8 +167,11 @@ class ImageModificationPage(QWidget):
         layout = QVBoxLayout()
         
         # Brightness
-        brightness_layout = QHBoxLayout()
         brightness_label = QLabel("Brightness:")
+        brightness_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        layout.addWidget(brightness_label)
+        
+        brightness_layout = QHBoxLayout()
         self.brightness_slider = QSlider(Qt.Orientation.Horizontal)
         self.brightness_slider.setMinimum(0)
         self.brightness_slider.setMaximum(200)
@@ -177,14 +180,17 @@ class ImageModificationPage(QWidget):
         self.brightness_slider.setTickInterval(25)
         self.brightness_slider.valueChanged.connect(self.update_preview)
         self.brightness_value = QLabel("1.0")
-        brightness_layout.addWidget(brightness_label)
+        self.brightness_value.setMinimumWidth(35)
         brightness_layout.addWidget(self.brightness_slider)
         brightness_layout.addWidget(self.brightness_value)
         layout.addLayout(brightness_layout)
         
         # Contrast
-        contrast_layout = QHBoxLayout()
         contrast_label = QLabel("Contrast:")
+        contrast_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        layout.addWidget(contrast_label)
+        
+        contrast_layout = QHBoxLayout()
         self.contrast_slider = QSlider(Qt.Orientation.Horizontal)
         self.contrast_slider.setMinimum(0)
         self.contrast_slider.setMaximum(200)
@@ -193,14 +199,17 @@ class ImageModificationPage(QWidget):
         self.contrast_slider.setTickInterval(25)
         self.contrast_slider.valueChanged.connect(self.update_preview)
         self.contrast_value = QLabel("1.0")
-        contrast_layout.addWidget(contrast_label)
+        self.contrast_value.setMinimumWidth(35)
         contrast_layout.addWidget(self.contrast_slider)
         contrast_layout.addWidget(self.contrast_value)
         layout.addLayout(contrast_layout)
         
         # Sharpness
-        sharpness_layout = QHBoxLayout()
         sharpness_label = QLabel("Sharpness:")
+        sharpness_label.setStyleSheet("font-weight: bold; font-size: 12px;")
+        layout.addWidget(sharpness_label)
+        
+        sharpness_layout = QHBoxLayout()
         self.sharpness_slider = QSlider(Qt.Orientation.Horizontal)
         self.sharpness_slider.setMinimum(0)
         self.sharpness_slider.setMaximum(200)
@@ -209,7 +218,7 @@ class ImageModificationPage(QWidget):
         self.sharpness_slider.setTickInterval(25)
         self.sharpness_slider.valueChanged.connect(self.update_preview)
         self.sharpness_value = QLabel("1.0")
-        sharpness_layout.addWidget(sharpness_label)
+        self.sharpness_value.setMinimumWidth(35)
         sharpness_layout.addWidget(self.sharpness_slider)
         sharpness_layout.addWidget(self.sharpness_value)
         layout.addLayout(sharpness_layout)
@@ -483,6 +492,12 @@ class ImageModificationPage(QWidget):
         filter_name = self.filter_combo.currentText()
         
         if filter_name == "None":
+            # Reset to the image before filters by undoing
+            if self.history_index > 0:
+                self.undo()
+                self.status_label.setText("Filter removed - reverted to previous state")
+            else:
+                self.status_label.setText("No filter to remove")
             return
         
         try:
