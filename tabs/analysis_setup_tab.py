@@ -1,3 +1,18 @@
+# 3. Running on Docker Container:
+
+# 	Open Docker Desktop and make sure your Docker engine is running
+# 	In the terminal cd into the Image-Processing-App and run:
+# 		docker build --no-cache -t image-analysis-cnn Docker/
+
+# 	You can test the container in the terminal by running: 
+# 	docker run --rm -v "C:\Image-Processing-App\testing_images\grey_images:/data" 
+# 	-v "C:\Image-Processing-App\results:/app/output" image-analysis-cnn --model vgg16 
+# 	--folder /data --name test_run
+
+# 	Once that is working you can use the GUI to run the analysis
+
+# 	Result files currently go to the image directory that was chosen for analysis
+
 """
 Analysis Setup Tab - Configure analysis parameters and settings
 """
@@ -5,16 +20,8 @@ Analysis Setup Tab - Configure analysis parameters and settings
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QPushButton, QLineEdit, QButtonGroup, QFileDialog)
 from PySide6.QtCore import Qt
-# import numpy as np
+from PySide6.QtCore import QProcess
 import os
-# import torch
-# import torchvision.models as models
-# import torchvision.transforms as transforms
-from PIL import Image
-# from sklearn.metrics.pairwise import cosine_similarity
-# import seaborn as sns
-# import matplotlib.pyplot as plt
-# import pandas as pd
 
 class AnalysisSetupTab(QWidget):
     """
@@ -25,6 +32,7 @@ class AnalysisSetupTab(QWidget):
         super().__init__(parent)
         self.selected_folder = ""
         self.selected_model = None
+        self.process = None
         self.setup_ui()
     
     def setup_ui(self):
@@ -46,6 +54,7 @@ class AnalysisSetupTab(QWidget):
         model_label = QLabel("Select Model:")
         model_label.setStyleSheet("font-size: 14px; margin-right: 10px;")
         
+        #Model choice buttons
         self.vg_button = QPushButton("VGG16")
         self.res_button = QPushButton("ResNet50")
         for btn in (self.vg_button, self.res_button):
@@ -195,148 +204,47 @@ class AnalysisSetupTab(QWidget):
             self.selected_folder = folder
             self.status_label.setText(f"Selected folder: {folder}")
 
-    def run_cnn_analysis(self, model_name, folder, result_name):
-        images, image_names = self.load_images(folder)
-        if len(images) == 0:
-           raise ValueError("No .jpg images")
-        model = self.load_model(model_name)
-        features = self.extract_features(model, images)
-        df, sim_matrix = self.compute_pairwise_similarity(features, image_names)
-        csv_path = os.path.join(folder, f"{result_name}_similarity.csv")
-        heat_path = os.path.join(folder, f"{result_name}_heatmap.png")
-        self.save_to_csv(df, csv_path)
-        self.generate_heatmap(df, heat_path)
-    
-    def load_images(self, image_path):
-      '''
-          goes through all the files in folder, converts them to 
-          greyscale and processes them to be used for the models
-      '''
-      images = []
-      image_names = []
-      for filename in os.listdir(image_path):
-          if filename.lower().endswith(('.jpg')):
-              img_path = os.path.join(image_path, filename)
-              img = Image.open(img_path).convert("L")#converting image to greyscale
-              img = img.convert("L")
-              img = np.array(img)#converting from pillow obj to NumPy array
-              img_3ch = np.stack([img, img, img], axis=-1)#duplicating channels
-              img_3ch = Image.fromarray(img_3ch.astype(np.uint8)) #converting back to pillow obj
-              images.append(img_3ch)
-              image_names.append(filename)
-      return images, image_names
-    
-    def get_transform(self):
-      '''
-          processes image by resizing it to 224x224, converting it 
-          to a PyTorch tensor (data structure used in deep learning), and 
-          normalizes the image using ImageNet mean and std values
-
-      '''
-      return transforms.Compose([transforms.Resize((224, 224)),
-                                transforms.ToTensor(),
-                                transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                                      std=[0.229, 0.244, 0.225])
-      ])
-    
-    def load_model(self, model_name):
-      if model_name == 'vgg16':
-          model = models.vgg16(weights=models.VGG16_Weights.IMAGENET1K_V1)
-          model.eval()#turns off batch normalization updates
-          #returning feature vectors
-          return torch.nn.Sequential(model.features, torch.nn.AdaptiveAvgPool2d((7, 7)), torch.nn.Flatten(), model.classifier[0] )
-      elif model_name == 'resnet50':
-          model = models.resnet50(weights=models.ResNet50_Weights.IMAGENET1K_V1)
-          model.eval()
-          return torch.nn.Sequential(*(list(model.children())[:-1]), torch.nn.Flatten())
-      else:
-          raise ValueError("Not an available model.")
-      
-
-    def extract_features(self, model, images):
-      transform = self.get_transform()
-      features = []
-      for img in images:
-          img_t = transform(img).unsqueeze(0)#adding a batch dimension
-          with torch.no_grad():#disables gradient computation
-              feat = model(img_t)
-              feat = feat.view(feat.size(0), -1)#making output a 1D vector
-              features.append(feat.numpy()[0]) #changing it into a numpy array and appending to features
-      return np.array(features)
-    
-
-    def compute_pairwise_similarity(self, features, image_names):
-      sim_matrix = cosine_similarity(features)
-      df = pd.DataFrame(sim_matrix, index=image_names, columns=image_names)
-      return df, sim_matrix
-    
-
-    def save_to_csv(self, df, output_path):
-      df.to_csv(output_path, index=True)
-
-
-    def generate_heatmap(self, df, output_path):
-      plt.figure(figsize=(10, 8))
-      sns.heatmap(df, annot=False, cmap="coolwarm", xticklabels=True, yticklabels=True)
-      plt.title("Pairwise Image Similarity Heatmap", fontsize=14)
-      plt.tight_layout()
-      plt.savefig(output_path, dpi=300)
-      plt.close()
-
-
-    def image_comparison(self, model_name, image_path, heat_name, csv_name):
-      images, image_names = self.load_images(image_path)
-      model = self.load_model(model_name)
-      features = self.extract_features(model, images)
-      df, sim_matrix = self.compute_pairwise_similarity(features, image_names)
-      self.save_to_csv(df, f'{csv_name}.csv')
-      self.generate_heatmap(df, f'{heat_name}.png')
-      labels = self.extract_labels(image_names)
-      #labels = image_names
-      accuracy = self.category_similarity_accuracy(sim_matrix, labels)
-      print(f"Category Similarity Accuracy: {accuracy:.3f}")
-
-
-    def extract_labels(self, image_names):
-      return np.array([name.split(".")[1][:4] for name in image_names])
-    
-
-    def category_similarity_accuracy(self, sim_matrix, labels):
-      same_class_sims = []
-      diff_class_sims = []
-      n = len(labels)
-      for i in range(n):
-          for j in range(i+1, n):
-              if labels[i] == labels[j]:
-                  same_class_sims.append(sim_matrix[i, j])
-              else:
-                  diff_class_sims.append(sim_matrix[i, j])
-      threshold = np.median(diff_class_sims)
-      correct = sum(sim > threshold for sim in same_class_sims)
-      accuracy = correct / len(same_class_sims)
-      return accuracy
-    
-
     def on_apply(self):
-        if self.vg_button.isChecked():
-            model_name = "vgg16"
-        elif self.res_button.isChecked():
-            model_name = "resnet50"
-        else:
-            self.status_label.setText("Please select a model")
-            return
+        #checking that user has added their input
         if not self.selected_folder:
-            self.status_label.setText("Please select an image folder")
+            self.status_label.setText("Please select and image folder")
             return
-        result_name = self.name_input.text().strip()
-        if not result_name:
-            self.status_label.setText("Enter name for result files")
+        if not (self.vg_button.isChecked() or self.res_button.isChecked()):
+            self.status_label.setText("Please select model")
+            return
+        model = "vgg16" if self.vg_button.isChecked() else "resnet50"
+        name = self.name_input.text().strip()
+        if not name:
+            self.status_label.setText("Please enter a result name")
             return
         self.status_label.setText("Running analysis...")
-        try:
-            self.run_cnn_analysis(model_name, self.selected_folder, result_name)
-            self.status_label.setText("Analysis Complete")
-        except Exception as e:
-            self.status_label.setText(f"Error: {e}")
 
+        #starting docker container to run the analysis
+        self.process = QProcess(self)
+        self.process.finished.connect(self.on_analysis_finished)
+        # self.process.readyReadStandardError.connect(self.on_analysis_error)
+        self.process.start(
+            # exe_path,
+            # [
+            #     "--model", model,
+            #     "--folder", self.selected_folder,
+            #     "--name", name
+            # ]
+             "docker",
+             [
+                 "run",
+                 "--rm",
+                 "-v", f"{self.selected_folder}:/data:ro",
+                 "-v", f"{self.selected_folder}/results:/output",
+                 "-e", "OUTPUT_DIR=/output",
+                 "image-analysis-cnn",
+                 "--model", model,
+                 "--folder", "/data",
+                 "--name", name
+            ]
+        )
+
+    #successful analysis message
+    def on_analysis_finished(self):
+        self.status_label.setText("Anlaysis complete! Results saved to folder")
       
