@@ -27,6 +27,22 @@ def _get_test_images() -> List[Path]:
     return paths
 
 
+def _get_n_images(n: int) -> List[Path]:
+    """Get n images, cycling through available images if necessary"""
+    available = _get_test_images()
+    if not available:
+        return []
+    
+    if len(available) >= n:
+        return available[:n]
+    
+    # Cycle through available images to reach n
+    result = []
+    for i in range(n):
+        result.append(available[i % len(available)])
+    return result
+
+
 @pytest.fixture
 def page(qtbot):
     """Create a fresh ImageModificationPage instance"""
@@ -67,12 +83,10 @@ class TestBulkImageLoading:
 
     def test_load_25_images_sequential(self, page, qtbot):
         """Load 25 images one after another and measure time"""
-        test_images = _get_test_images()
+        images_to_load = _get_n_images(25)
         
-        if len(test_images) < 25:
-            pytest.skip(f"Need at least 25 test images, found {len(test_images)}")
-        
-        images_to_load = test_images[:25]
+        if not images_to_load:
+            pytest.skip("No test images found")
         
         start_time = time.perf_counter()
         
@@ -89,6 +103,30 @@ class TestBulkImageLoading:
         print(f"  Average time per image: {avg_time:.3f}s")
         
         assert elapsed < 75, f"Loading {len(images_to_load)} images took too long: {elapsed:.2f}s"
+
+    def test_load_100_images_stress_test(self, page, qtbot):
+        """STRESS TEST: Load 100 images and measure time"""
+        images_to_load = _get_n_images(100)
+        
+        if not images_to_load:
+            pytest.skip("No test images found")
+        
+        start_time = time.perf_counter()
+        
+        for img_path in images_to_load:
+            page.load_image(str(img_path))
+            assert page.current_image is not None
+        
+        end_time = time.perf_counter()
+        elapsed = end_time - start_time
+        
+        avg_time = elapsed / len(images_to_load)
+        
+        print(f"\n✓ STRESS TEST: Loaded {len(images_to_load)} images in {elapsed:.3f}s")
+        print(f"  Average time per image: {avg_time:.3f}s")
+        print(f"  Total throughput: {len(images_to_load)/elapsed:.2f} images/sec")
+        
+        assert elapsed < 300, f"Loading {len(images_to_load)} images took too long: {elapsed:.2f}s"
 
     def test_load_all_available_images(self, page, qtbot):
         """Load all available test images and measure performance"""
@@ -119,12 +157,10 @@ class TestBulkImageOperations:
 
     def test_rotate_multiple_images(self, page, qtbot):
         """Rotate 10 images and measure time"""
-        test_images = _get_test_images()
+        images_to_process = _get_n_images(10)
         
-        if len(test_images) < 10:
-            pytest.skip(f"Need at least 10 test images, found {len(test_images)}")
-        
-        images_to_process = test_images[:10]
+        if not images_to_process:
+            pytest.skip("No test images found")
         
         start_time = time.perf_counter()
         
@@ -143,12 +179,10 @@ class TestBulkImageOperations:
 
     def test_apply_filter_to_multiple_images(self, page, qtbot):
         """Apply blur filter to multiple images and measure time"""
-        test_images = _get_test_images()
+        images_to_process = _get_n_images(10)
         
-        if len(test_images) < 10:
-            pytest.skip(f"Need at least 10 test images, found {len(test_images)}")
-        
-        images_to_process = test_images[:10]
+        if not images_to_process:
+            pytest.skip("No test images found")
         
         start_time = time.perf_counter()
         
@@ -168,12 +202,10 @@ class TestBulkImageOperations:
 
     def test_brightness_adjustment_multiple_images(self, page, qtbot):
         """Adjust brightness on multiple images and measure time"""
-        test_images = _get_test_images()
+        images_to_process = _get_n_images(10)
         
-        if len(test_images) < 10:
-            pytest.skip(f"Need at least 10 test images, found {len(test_images)}")
-        
-        images_to_process = test_images[:10]
+        if not images_to_process:
+            pytest.skip("No test images found")
         
         start_time = time.perf_counter()
         
@@ -194,12 +226,10 @@ class TestBulkImageOperations:
 
     def test_complex_operation_chain_multiple_images(self, page, qtbot):
         """Perform multiple operations on each image and measure time"""
-        test_images = _get_test_images()
+        images_to_process = _get_n_images(5)
         
-        if len(test_images) < 5:
-            pytest.skip(f"Need at least 5 test images, found {len(test_images)}")
-        
-        images_to_process = test_images[:5]
+        if not images_to_process:
+            pytest.skip("No test images found")
         
         start_time = time.perf_counter()
         
@@ -231,18 +261,50 @@ class TestBulkImageOperations:
         print(f"\n✓ Applied 4 operations to {len(images_to_process)} images in {elapsed:.3f}s")
         print(f"  Average time per image: {avg_time:.3f}s")
 
+    def test_process_100_images_stress_test(self, page, qtbot):
+        """STRESS TEST: Apply operations to 100 images"""
+        images_to_process = _get_n_images(100)
+        
+        if not images_to_process:
+            pytest.skip("No test images found")
+        
+        start_time = time.perf_counter()
+        
+        for idx, img_path in enumerate(images_to_process):
+            page.load_image(str(img_path))
+            
+            # Vary operations to stress different code paths
+            if idx % 3 == 0:
+                page.rotate_image(90)
+            elif idx % 3 == 1:
+                page.brightness_slider.setValue(120)
+                page.update_preview()
+                page.apply_adjustments()
+            else:
+                page.filter_combo.setCurrentText("Blur")
+                page.apply_filter()
+            
+            assert page.current_image is not None
+        
+        end_time = time.perf_counter()
+        elapsed = end_time - start_time
+        
+        avg_time = elapsed / len(images_to_process)
+        
+        print(f"\n✓ STRESS TEST: Processed {len(images_to_process)} images with operations in {elapsed:.3f}s")
+        print(f"  Average time per image: {avg_time:.3f}s")
+        print(f"  Total throughput: {len(images_to_process)/elapsed:.2f} images/sec")
+
 
 class TestMemoryHandling:
     """Test memory handling with many images"""
 
     def test_rapid_image_switching(self, page, qtbot):
         """Rapidly switch between images to test memory cleanup"""
-        test_images = _get_test_images()
+        images_to_load = _get_n_images(20)
         
-        if len(test_images) < 20:
-            pytest.skip(f"Need at least 20 test images, found {len(test_images)}")
-        
-        images_to_load = test_images[:20]
+        if not images_to_load:
+            pytest.skip("No test images found")
         
         start_time = time.perf_counter()
         
@@ -264,6 +326,35 @@ class TestMemoryHandling:
         
         print(f"\n✓ Loaded {total_loads} images (rapid switching) in {elapsed:.3f}s")
         print(f"  Average time per load: {avg_time:.3f}s")
+
+    def test_100_images_memory_stress(self, page, qtbot):
+        """STRESS TEST: Load 100 images to test memory handling"""
+        images_to_load = _get_n_images(100)
+        
+        if not images_to_load:
+            pytest.skip("No test images found")
+        
+        start_time = time.perf_counter()
+        
+        # Load all 100 images sequentially
+        for img_path in images_to_load:
+            page.load_image(str(img_path))
+            assert page.current_image is not None
+        
+        # Load them again in reverse to test cleanup
+        for img_path in reversed(images_to_load):
+            page.load_image(str(img_path))
+            assert page.current_image is not None
+        
+        end_time = time.perf_counter()
+        elapsed = end_time - start_time
+        
+        total_loads = len(images_to_load) * 2
+        avg_time = elapsed / total_loads
+        
+        print(f"\n✓ STRESS TEST: Loaded {total_loads} images (memory test) in {elapsed:.3f}s")
+        print(f"  Average time per load: {avg_time:.3f}s")
+        print(f"  Total throughput: {total_loads/elapsed:.2f} images/sec")
 
     def test_large_image_handling(self, page, qtbot):
         """Test handling of larger images"""
