@@ -116,10 +116,10 @@ def test_blur_filter_matches_pil(page, image_path: Path):
     page.load_image(str(image_path))
     original = page.original_image.copy()
 
-    page.filter_combo.setCurrentText("Blur")
+    page.filter_combo.setCurrentText("Box Blur")
     page.apply_filter()
 
-    expected = original.filter(ImageFilter.BLUR)
+    expected = original.filter(ImageFilter.BoxBlur(2))
     actual = page.get_modified_image()
 
     _assert_images_close(actual, expected)
