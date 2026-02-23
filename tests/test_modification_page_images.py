@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 from PIL import Image, ImageEnhance, ImageFilter
 
-from Image_Modification_Page import ImageModificationPage
+from tabs.Image_Modification_Page import ImageModificationPage
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
