@@ -299,9 +299,47 @@ class ResultsTab(QWidget):
         # Tab 4: Object Summary - Per-object statistics
         summary_tab = QWidget()
         summary_tab_layout = QVBoxLayout(summary_tab)
+        summary_tab_layout.setContentsMargins(6, 6, 6, 6)
+        summary_tab_layout.setSpacing(4)
+
+        # Compact header row: description + legend side by side
+        header_widget = QWidget()
+        header_layout = QHBoxLayout(header_widget)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(12)
+
+        summary_desc = QLabel(
+            "Mean similarity between object groups. "
+            "<b>Diagonal</b> = same-object views. "
+            "<b>Off-diagonal</b> = cross-object. "
+            "Last 3 cols = intra-group stats."
+        )
+        summary_desc.setStyleSheet("color: #374151; font-size: 11px; padding: 4px 6px; "
+                                   "background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px;")
+        summary_desc.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        header_layout.addWidget(summary_desc)
+
+        # Compact legend
+        legend_items = [
+            ("#add8e6", "Same obj"),
+            ("#ffffe0", "High ≥0.6"),
+            ("#ffdab9", "Mod ≥0.4"),
+            ("#90ee90", "Low <0.4"),
+            ("#e8f0ff", "Intra stats"),
+        ]
+        for color, text in legend_items:
+            swatch = QLabel()
+            swatch.setFixedSize(12, 12)
+            swatch.setStyleSheet(f"background-color: {color}; border: 1px solid #aaa; border-radius: 2px;")
+            desc_lbl = QLabel(text)
+            desc_lbl.setStyleSheet("color: #374151; font-size: 10px;")
+            header_layout.addWidget(swatch)
+            header_layout.addWidget(desc_lbl)
+
+        summary_tab_layout.addWidget(header_widget)
 
         self.summary_table = QTableWidget()
-        self.summary_table.setMinimumSize(600, 400)
+        self.summary_table.setMinimumSize(600, 350)
         summary_tab_layout.addWidget(self.summary_table)
 
         self.results_tabs.addTab(summary_tab, "Object Summary")
@@ -560,61 +598,67 @@ class ResultsTab(QWidget):
             }
         """)
 
-        # Set table dimensions
-        self.similarity_table.setRowCount(len(self.similarity_data))
-        self.similarity_table.setColumnCount(len(self.similarity_data.columns))
+        # Hide Qt's separate vertical header — row labels become the first data column
+        self.similarity_table.verticalHeader().hide()
 
-        # Set headers
-        self.similarity_table.setHorizontalHeaderLabels(list(self.similarity_data.columns))
-        self.similarity_table.setVerticalHeaderLabels(list(self.similarity_data.index))
+        n_rows = len(self.similarity_data)
+        n_cols = len(self.similarity_data.columns)
 
-        # Fill table with data
+        self.similarity_table.setRowCount(n_rows)
+        self.similarity_table.setColumnCount(n_cols + 1)  # +1 for inline row-label column
+
+        # Horizontal headers: blank for the label column, then data column names
+        col_labels = [c.replace('.jpg', '').replace('.png', '') for c in self.similarity_data.columns]
+        self.similarity_table.setHorizontalHeaderLabels([""] + col_labels)
+
+        label_font = QFont()
+        label_font.setBold(True)
+        label_font.setPointSize(9)
+
         for i, row_name in enumerate(self.similarity_data.index):
+            # Column 0: inline row label styled like a header cell
+            display_name = row_name.replace('.jpg', '').replace('.png', '')
+            label_item = QTableWidgetItem(display_name)
+            label_item.setBackground(QBrush(QColor(232, 237, 242)))
+            label_item.setForeground(QBrush(QColor(44, 62, 80)))
+            label_item.setFont(label_font)
+            label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.similarity_table.setItem(i, 0, label_item)
+
+            # Columns 1..N: similarity values
             for j, col_name in enumerate(self.similarity_data.columns):
                 value = self.similarity_data.iloc[i, j]
                 item = QTableWidgetItem(f"{value:.4f}")
 
-                # Color code based on similarity value
                 if isinstance(value, (int, float)):
                     if value >= 0.8:
-                        item.setBackground(QBrush(QColor(144, 238, 144)))  # Light green
+                        item.setBackground(QBrush(QColor(144, 238, 144)))
                     elif value >= 0.6:
-                        item.setBackground(QBrush(QColor(255, 255, 224)))  # Light yellow
+                        item.setBackground(QBrush(QColor(255, 255, 224)))
                     elif value >= 0.4:
-                        item.setBackground(QBrush(QColor(255, 218, 185)))  # Light orange
+                        item.setBackground(QBrush(QColor(255, 218, 185)))
                     else:
-                        item.setBackground(QBrush(QColor(255, 182, 193)))  # Light red
+                        item.setBackground(QBrush(QColor(255, 182, 193)))
 
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setForeground(QBrush(QColor(0, 0, 0)))  # Black text
-                self.similarity_table.setItem(i, j, item)
+                item.setForeground(QBrush(QColor(0, 0, 0)))
+                self.similarity_table.setItem(i, j + 1, item)
 
-        # Adjust column widths
+        # Label column: auto-size to fit content; data columns: fixed interactive width
         header = self.similarity_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-
-        # Style headers to ensure proper text visibility
+        header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        header.setDefaultSectionSize(72)
+        header.setMinimumSectionSize(60)
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         header.setStyleSheet("""
             QHeaderView::section {
                 background-color: #f8f9fa;
                 color: #2c3e50;
-                padding: 5px;
+                padding: 4px 4px;
                 border: 1px solid #e0e0e0;
                 font-weight: bold;
-                font-size: 11px;
-            }
-        """)
-
-        # Style vertical headers (row labels)
-        vertical_header = self.similarity_table.verticalHeader()
-        vertical_header.setStyleSheet("""
-            QHeaderView::section {
-                background-color: #f8f9fa;
-                color: #2c3e50;
-                padding: 5px;
-                border: 1px solid #e0e0e0;
-                font-weight: bold;
-                font-size: 11px;
+                font-size: 10px;
             }
         """)
 
@@ -783,18 +827,35 @@ class ResultsTab(QWidget):
 
     def display_filtered_table(self, data):
         """Display filtered data in the filtered table"""
-        self.filtered_table.setRowCount(len(data))
-        self.filtered_table.setColumnCount(len(data.columns))
+        self.filtered_table.verticalHeader().hide()
 
-        self.filtered_table.setHorizontalHeaderLabels(list(data.columns))
-        self.filtered_table.setVerticalHeaderLabels(list(data.index))
+        n_rows = len(data)
+        n_cols = len(data.columns)
+
+        self.filtered_table.setRowCount(n_rows)
+        self.filtered_table.setColumnCount(n_cols + 1)
+
+        col_labels = [c.replace('.jpg', '').replace('.png', '') for c in data.columns]
+        self.filtered_table.setHorizontalHeaderLabels([""] + col_labels)
+
+        label_font = QFont()
+        label_font.setBold(True)
+        label_font.setPointSize(9)
 
         for i, row_name in enumerate(data.index):
+            display_name = row_name.replace('.jpg', '').replace('.png', '')
+            label_item = QTableWidgetItem(display_name)
+            label_item.setBackground(QBrush(QColor(232, 237, 242)))
+            label_item.setForeground(QBrush(QColor(44, 62, 80)))
+            label_item.setFont(label_font)
+            label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.filtered_table.setItem(i, 0, label_item)
+
             for j, col_name in enumerate(data.columns):
                 value = data.iloc[i, j]
                 item = QTableWidgetItem(f"{value:.4f}")
 
-                # Color code
                 if isinstance(value, (int, float)):
                     if value >= 0.8:
                         item.setBackground(QBrush(QColor(144, 238, 144)))
@@ -807,22 +868,25 @@ class ResultsTab(QWidget):
 
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.filtered_table.setItem(i, j, item)
+                self.filtered_table.setItem(i, j + 1, item)
 
-        self.filtered_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        fh = self.filtered_table.horizontalHeader()
+        fh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+        fh.setDefaultSectionSize(72)
+        fh.setMinimumSectionSize(60)
+        fh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        fh.setStyleSheet("""
+            QHeaderView::section {
+                background-color: #f8f9fa;
+                color: #2c3e50;
+                padding: 4px 4px;
+                border: 1px solid #e0e0e0;
+                font-weight: bold;
+                font-size: 10px;
+            }
+        """)
+
         self.filtered_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-
-        # Style headers for filtered table
-        for header in [self.filtered_table.horizontalHeader(), self.filtered_table.verticalHeader()]:
-            header.setStyleSheet("""
-                QHeaderView::section {
-                    background-color: #f8f9fa;
-                    color: #2c3e50;
-                    padding: 5px;
-                    border: 1px solid #e0e0e0;
-                    font-weight: bold;
-                }
-            """)
 
     def update_filtered_stats(self, data, obj1, obj2):
         """Update statistics for filtered data"""
@@ -857,16 +921,30 @@ class ResultsTab(QWidget):
 
         objects = sorted(self.object_groups.keys(), key=lambda x: int(x.split()[1]))
 
-        # Set up table: Objects as both rows and columns, showing mean similarity
-        self.summary_table.setRowCount(len(objects))
-        self.summary_table.setColumnCount(len(objects) + 3)  # +3 for intra-object stats
+        # Hide Qt's vertical header — row labels become the first data column
+        self.summary_table.verticalHeader().hide()
 
-        headers = objects + ["Intra-Mean", "Intra-Min", "Intra-Max"]
+        self.summary_table.setRowCount(len(objects))
+        self.summary_table.setColumnCount(len(objects) + 4)  # +1 label col, +3 intra-stats
+
+        headers = [""] + objects + ["Intra-Mean", "Intra-Min", "Intra-Max"]
         self.summary_table.setHorizontalHeaderLabels(headers)
-        self.summary_table.setVerticalHeaderLabels(objects)
+
+        label_font = QFont()
+        label_font.setBold(True)
+        label_font.setPointSize(9)
 
         for i, obj1 in enumerate(objects):
             rows = self.object_groups[obj1]
+
+            # Column 0: inline row label
+            label_item = QTableWidgetItem(obj1)
+            label_item.setBackground(QBrush(QColor(232, 237, 242)))
+            label_item.setForeground(QBrush(QColor(44, 62, 80)))
+            label_item.setFont(label_font)
+            label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.summary_table.setItem(i, 0, label_item)
 
             # Intra-object statistics
             intra_data = self.similarity_data.loc[rows, rows].values
@@ -885,42 +963,40 @@ class ResultsTab(QWidget):
                 mean_val = np.nanmean(subset)
                 item = QTableWidgetItem(f"{mean_val:.4f}")
 
-                # Color code - intra-object should be high, inter-object lower
                 if i == j:
-                    item.setBackground(QBrush(QColor(173, 216, 230)))  # Light blue for same object
+                    item.setBackground(QBrush(QColor(173, 216, 230)))
                 elif mean_val >= 0.6:
-                    item.setBackground(QBrush(QColor(255, 255, 224)))  # Yellow for high cross-obj
+                    item.setBackground(QBrush(QColor(255, 255, 224)))
                 elif mean_val >= 0.4:
                     item.setBackground(QBrush(QColor(255, 218, 185)))
                 else:
-                    item.setBackground(QBrush(QColor(144, 238, 144)))  # Green for low cross-obj (good discrimination)
+                    item.setBackground(QBrush(QColor(144, 238, 144)))
 
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.summary_table.setItem(i, j, item)
+                self.summary_table.setItem(i, j + 1, item)
 
-            # Add intra-object stats
+            # Add intra-object stats (after object columns)
             for k, val in enumerate([intra_mean, intra_min, intra_max]):
                 item = QTableWidgetItem(f"{val:.4f}")
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setBackground(QBrush(QColor(240, 248, 255)))
+                item.setBackground(QBrush(QColor(232, 240, 255)))
                 item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.summary_table.setItem(i, len(objects) + k, item)
+                self.summary_table.setItem(i, len(objects) + 1 + k, item)
 
-        self.summary_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        sh = self.summary_table.horizontalHeader()
+        sh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        sh.setStyleSheet("""
+            QHeaderView::section {
+                background-color: #f8f9fa;
+                color: #2c3e50;
+                padding: 5px 6px;
+                border: 1px solid #e0e0e0;
+                font-weight: bold;
+                font-size: 10px;
+            }
+        """)
         self.summary_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-
-        # Style headers
-        for header in [self.summary_table.horizontalHeader(), self.summary_table.verticalHeader()]:
-            header.setStyleSheet("""
-                QHeaderView::section {
-                    background-color: #f8f9fa;
-                    color: #2c3e50;
-                    padding: 5px;
-                    border: 1px solid #e0e0e0;
-                    font-weight: bold;
-                }
-            """)
 
     def update_top_matches(self):
         """Update the top matches table based on current selection"""
@@ -958,12 +1034,15 @@ class ResultsTab(QWidget):
         self.matches_table.setColumnCount(4)
         self.matches_table.setHorizontalHeaderLabels(['Image 1', 'Image 2', 'Similarity', 'Same Object'])
 
+        def strip_ext(name):
+            return name.replace('.jpg', '').replace('.png', '')
+
         for i, (_, row) in enumerate(df_pairs.iterrows()):
-            img1_item = QTableWidgetItem(row['Image 1'])
+            img1_item = QTableWidgetItem(strip_ext(row['Image 1']))
             img1_item.setForeground(QBrush(QColor(0, 0, 0)))
             self.matches_table.setItem(i, 0, img1_item)
 
-            img2_item = QTableWidgetItem(row['Image 2'])
+            img2_item = QTableWidgetItem(strip_ext(row['Image 2']))
             img2_item.setForeground(QBrush(QColor(0, 0, 0)))
             self.matches_table.setItem(i, 1, img2_item)
 
