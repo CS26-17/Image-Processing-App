@@ -67,6 +67,9 @@ class ResultsTab(QWidget):
         self.object_groups = {}  # Store object groupings
         self.current_filter_obj1 = None
         self.current_filter_obj2 = None
+        self.image_folder = None      # Directory where source images live
+        self.selected_img1 = None     # Currently selected image filenames
+        self.selected_img2 = None
         self.setup_ui()
     
     def setup_ui(self):
@@ -380,16 +383,125 @@ class ResultsTab(QWidget):
         
         # 4. Comparison Section
         self.comparison_section = SectionWidget("Image Comparison")
+
+        # Folder picker row
+        folder_row = QWidget()
+        folder_row_layout = QHBoxLayout(folder_row)
+        folder_row_layout.setContentsMargins(0, 0, 0, 6)
+        folder_row_layout.setSpacing(8)
+
+        btn_set_folder = QPushButton("Set Image Folder")
+        btn_set_folder.clicked.connect(self.set_image_folder)
+        btn_set_folder.setStyleSheet("""
+            QPushButton {
+                background-color: #3b82f6; color: white;
+                border: none; padding: 6px 14px;
+                border-radius: 5px; font-weight: bold;
+            }
+            QPushButton:hover { background-color: #2563eb; }
+        """)
+        folder_row_layout.addWidget(btn_set_folder)
+
+        self.comp_folder_label = QLabel("No image folder set — click a cell in the matrix to compare, then set folder if images don't load automatically.")
+        self.comp_folder_label.setStyleSheet("color: #6b7280; font-size: 11px;")
+        self.comp_folder_label.setWordWrap(True)
+        folder_row_layout.addWidget(self.comp_folder_label, 1)
+        self.comparison_section.content_layout.addWidget(folder_row)
+
+        # Instruction label
+        comp_hint = QLabel("Click any data cell in the Full Matrix, Compare Objects, or Top Matches table to select an image pair.")
+        comp_hint.setStyleSheet("color: #6b7280; font-size: 11px; font-style: italic; margin-bottom: 4px;")
+        self.comparison_section.content_layout.addWidget(comp_hint)
+
+        # Main comparison row: [Image 1] | [Score] | [Image 2]
         comparison_container = QWidget()
         comparison_layout = QHBoxLayout(comparison_container)
-        
-        # Before/After comparison placeholders
-        before = self._create_comparison_box("Original")
-        after = self._create_comparison_box("Processed")
-        
-        comparison_layout.addWidget(before)
-        comparison_layout.addWidget(after)
-        
+        comparison_layout.setSpacing(10)
+        comparison_layout.setContentsMargins(0, 0, 0, 0)
+
+        # --- Image 1 panel ---
+        img1_panel = QWidget()
+        img1_layout = QVBoxLayout(img1_panel)
+        img1_layout.setSpacing(4)
+        img1_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.comp_name1_label = QLabel("Image 1")
+        self.comp_name1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comp_name1_label.setStyleSheet("font-weight: bold; color: #374151; font-size: 12px;")
+        img1_layout.addWidget(self.comp_name1_label)
+
+        self.comp_img1_label = QLabel("Click a cell to select")
+        self.comp_img1_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comp_img1_label.setMinimumSize(220, 180)
+        self.comp_img1_label.setStyleSheet("""
+            QLabel {
+                background-color: #f3f4f6;
+                border: 2px dashed #d1d5db;
+                border-radius: 6px;
+                color: #9ca3af;
+                font-style: italic;
+            }
+        """)
+        img1_layout.addWidget(self.comp_img1_label)
+        comparison_layout.addWidget(img1_panel, 3)
+
+        # --- Centre score panel ---
+        score_panel = QWidget()
+        score_layout = QVBoxLayout(score_panel)
+        score_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        score_layout.setSpacing(6)
+
+        score_title = QLabel("Similarity")
+        score_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        score_title.setStyleSheet("color: #6b7280; font-size: 11px; font-weight: bold;")
+        score_layout.addWidget(score_title)
+
+        self.comp_score_label = QLabel("—")
+        self.comp_score_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comp_score_label.setStyleSheet("""
+            QLabel {
+                font-size: 26px; font-weight: bold;
+                color: #1f2937;
+                background-color: #f9fafb;
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                padding: 8px 14px;
+            }
+        """)
+        score_layout.addWidget(self.comp_score_label)
+
+        self.comp_same_obj_label = QLabel("")
+        self.comp_same_obj_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comp_same_obj_label.setStyleSheet("color: #6b7280; font-size: 11px;")
+        score_layout.addWidget(self.comp_same_obj_label)
+        comparison_layout.addWidget(score_panel, 1)
+
+        # --- Image 2 panel ---
+        img2_panel = QWidget()
+        img2_layout = QVBoxLayout(img2_panel)
+        img2_layout.setSpacing(4)
+        img2_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.comp_name2_label = QLabel("Image 2")
+        self.comp_name2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comp_name2_label.setStyleSheet("font-weight: bold; color: #374151; font-size: 12px;")
+        img2_layout.addWidget(self.comp_name2_label)
+
+        self.comp_img2_label = QLabel("Click a cell to select")
+        self.comp_img2_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.comp_img2_label.setMinimumSize(220, 180)
+        self.comp_img2_label.setStyleSheet("""
+            QLabel {
+                background-color: #f3f4f6;
+                border: 2px dashed #d1d5db;
+                border-radius: 6px;
+                color: #9ca3af;
+                font-style: italic;
+            }
+        """)
+        img2_layout.addWidget(self.comp_img2_label)
+        comparison_layout.addWidget(img2_panel, 3)
+
         self.comparison_section.content_layout.addWidget(comparison_container)
         scroll_layout.addWidget(self.comparison_section)
         
@@ -425,9 +537,14 @@ class ResultsTab(QWidget):
         self.export_section.content_layout.addLayout(button_layout)
         scroll_layout.addWidget(self.export_section)
         
+        # Connect table cell clicks to image comparison
+        self.similarity_table.cellClicked.connect(self.on_matrix_cell_clicked)
+        self.filtered_table.cellClicked.connect(self.on_matrix_cell_clicked)
+        self.matches_table.cellClicked.connect(self.on_matches_row_clicked)
+
         # Add stretch to push content to top
         scroll_layout.addStretch()
-        
+
         # Set up scroll area
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll)
@@ -579,6 +696,21 @@ class ResultsTab(QWidget):
         """Display similarity data in the table widget"""
         if self.similarity_data is None:
             return
+
+        # Auto-detect image folder if not already set
+        if self.image_folder is None:
+            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            candidates = [
+                os.path.join(project_root, "testing_images", "grey_images"),
+                os.path.join(project_root, "testing_images", "Images"),
+                os.path.join(project_root, "testing_images"),
+            ]
+            for candidate in candidates:
+                if os.path.isdir(candidate):
+                    self.image_folder = candidate
+                    self.comp_folder_label.setText(f"Image folder: {candidate}")
+                    self.comp_folder_label.setStyleSheet("color: #374151; font-size: 11px;")
+                    break
 
         # Update matrix info label
         num_images = len(self.similarity_data)
@@ -1091,6 +1223,171 @@ class ResultsTab(QWidget):
         if match1 and match2:
             return match1.group(1) == match2.group(1)
         return False
+
+    # ------------------------------------------------------------------
+    # Image comparison helpers
+    # ------------------------------------------------------------------
+
+    def set_image_folder(self):
+        """Let the user manually pick the folder that contains source images."""
+        folder = QFileDialog.getExistingDirectory(self, "Select Image Folder", "")
+        if folder:
+            self.image_folder = folder
+            self.comp_folder_label.setText(f"Image folder: {folder}")
+            self.comp_folder_label.setStyleSheet("color: #374151; font-size: 11px;")
+            # Refresh display if images are already selected
+            if self.selected_img1 and self.selected_img2:
+                self.update_comparison_display()
+
+    def _find_image_file(self, filename):
+        """Return the full path for a filename, searching image_folder first."""
+        # filename may already have .jpg or may not
+        candidates = [filename, filename + ".jpg", filename + ".png"]
+        if self.image_folder:
+            for name in candidates:
+                path = os.path.join(self.image_folder, name)
+                if os.path.isfile(path):
+                    return path
+        # Fallback: search common project locations
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        search_dirs = [
+            os.path.join(project_root, "testing_images", "grey_images"),
+            os.path.join(project_root, "testing_images", "Images"),
+            os.path.join(project_root, "testing_images"),
+        ]
+        for folder in search_dirs:
+            for name in candidates:
+                path = os.path.join(folder, name)
+                if os.path.isfile(path):
+                    return path
+        return None
+
+    def on_matrix_cell_clicked(self, row, col):
+        """Handle a click in the Full Matrix or Compare Objects table.
+
+        Column 0 holds the row label; clicking any data cell (col > 0) selects
+        that row's image as Image 1 and that column's image as Image 2.
+        Clicking the label column (col == 0) is ignored.
+        """
+        if self.similarity_data is None or col == 0:
+            return
+
+        # Determine which table sent the signal
+        table = self.sender()
+
+        row_label_item = table.item(row, 0)
+        col_header_item = table.horizontalHeaderItem(col)
+        if row_label_item is None or col_header_item is None:
+            return
+
+        # Display names have .jpg stripped; restore it for lookup
+        img1 = row_label_item.text()
+        img2 = col_header_item.text()
+        if not img1.endswith(('.jpg', '.png')):
+            img1 += '.jpg'
+        if not img2.endswith(('.jpg', '.png')):
+            img2 += '.jpg'
+
+        self.selected_img1 = img1
+        self.selected_img2 = img2
+        self.update_comparison_display()
+
+    def on_matches_row_clicked(self, row, _col):
+        """Handle a click in the Top Matches table — select that pair."""
+        if self.similarity_data is None:
+            return
+
+        img1_item = self.matches_table.item(row, 0)
+        img2_item = self.matches_table.item(row, 1)
+        if img1_item is None or img2_item is None:
+            return
+
+        img1 = img1_item.text()
+        img2 = img2_item.text()
+        if not img1.endswith(('.jpg', '.png')):
+            img1 += '.jpg'
+        if not img2.endswith(('.jpg', '.png')):
+            img2 += '.jpg'
+
+        self.selected_img1 = img1
+        self.selected_img2 = img2
+        self.update_comparison_display()
+
+    def update_comparison_display(self):
+        """Load and display the two selected images in the comparison section."""
+        def load_into(label, name_label, filename):
+            display = filename.replace('.jpg', '').replace('.png', '')
+            name_label.setText(display)
+            path = self._find_image_file(filename)
+            if path:
+                pixmap = QPixmap(path)
+                if not pixmap.isNull():
+                    scaled = pixmap.scaled(
+                        label.width() or 220,
+                        label.height() or 180,
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                    label.setPixmap(scaled)
+                    label.setStyleSheet("""
+                        QLabel {
+                            background-color: #ffffff;
+                            border: 1px solid #d1d5db;
+                            border-radius: 6px;
+                        }
+                    """)
+                    return
+            label.setText(f"Image not found:\n{filename}")
+            label.setStyleSheet("""
+                QLabel {
+                    background-color: #fff7ed;
+                    border: 2px dashed #f97316;
+                    border-radius: 6px;
+                    color: #9a3412;
+                    font-size: 11px;
+                }
+            """)
+
+        load_into(self.comp_img1_label, self.comp_name1_label, self.selected_img1)
+        load_into(self.comp_img2_label, self.comp_name2_label, self.selected_img2)
+
+        # Similarity score
+        score_text = "—"
+        color = "#1f2937"
+        bg = "#f9fafb"
+        if self.similarity_data is not None:
+            # Try to look up the score; both the original .jpg names are index keys
+            try:
+                score = self.similarity_data.loc[self.selected_img1, self.selected_img2]
+                score_text = f"{score:.4f}"
+                if score >= 0.8:
+                    color, bg = "#166534", "#dcfce7"
+                elif score >= 0.6:
+                    color, bg = "#854d0e", "#fefce8"
+                elif score >= 0.4:
+                    color, bg = "#9a3412", "#fff7ed"
+                else:
+                    color, bg = "#991b1b", "#fee2e2"
+            except KeyError:
+                score_text = "N/A"
+
+        self.comp_score_label.setText(score_text)
+        self.comp_score_label.setStyleSheet(f"""
+            QLabel {{
+                font-size: 26px; font-weight: bold;
+                color: {color};
+                background-color: {bg};
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                padding: 8px 14px;
+            }}
+        """)
+
+        same = self._same_object(self.selected_img1, self.selected_img2)
+        self.comp_same_obj_label.setText("Same object" if same else "Different objects")
+        self.comp_same_obj_label.setStyleSheet(
+            f"color: {'#166534' if same else '#6b7280'}; font-size: 11px; font-weight: bold;"
+        )
 
     def resizeEvent(self, event):
         """Handle resize events to update heatmap display"""
