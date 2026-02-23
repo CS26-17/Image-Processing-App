@@ -1,3 +1,14 @@
+"""
+Purpose:
+- Validate state correctness for edit history and filter workflow, not just happy-path output.
+- Validate error-path robustness for load/save operations.
+
+Method:
+- Build a synthetic non-uniform image so transforms/filters produce observable pixel changes.
+- Use pixel-level numpy assertions to verify exact image state transitions.
+- Use monkeypatch to isolate dialog and I/O failures and assert safe behavior under exceptions.
+"""
+
 from pathlib import Path
 
 import numpy as np
@@ -42,6 +53,7 @@ def page(qtbot):
 
 
 def test_history_undo_redo_branch_and_history_cap(page, tmp_path: Path):
+    # Verify undo/redo branch behavior and 50-entry history cap.
     image_path = _create_pattern_png(tmp_path)
     page.load_image(str(image_path))
     original = page.original_image.copy()
@@ -71,6 +83,7 @@ def test_history_undo_redo_branch_and_history_cap(page, tmp_path: Path):
 
 
 def test_filter_none_reverts_to_prefilter_and_prefilter_resets(page, tmp_path: Path):
+    # Verify "None" reverts to pre-filter state and permanent ops clear pre-filter cache.
     image_path = _create_pattern_png(tmp_path)
     page.load_image(str(image_path))
     base = page.get_modified_image().copy()
@@ -95,6 +108,7 @@ def test_filter_none_reverts_to_prefilter_and_prefilter_resets(page, tmp_path: P
 
 
 def test_load_and_save_error_paths(page, tmp_path: Path, monkeypatch):
+    # Verify warning/critical paths for save-without-image, bad load, and save failure.
     warning_calls = []
     critical_calls = []
 
