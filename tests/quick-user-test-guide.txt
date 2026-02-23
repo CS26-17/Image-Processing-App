@@ -1,0 +1,70 @@
+10-Minute User Test Script
+
+Goal
+- Check whether a first-time user can complete the core workflow: upload, edit, undo/redo, save, and recover from errors.
+- Identify usability friction points (wording, button discoverability, and feedback timing).
+
+Participant
+- 1 person who is not on the project team (preferably first-time user).
+- Device: laptop with mouse/trackpad.
+
+Setup
+1. Launch the app.
+2. Prepare 2 valid images (Image A, Image B) and 1 non-image file (for example, a .txt file).
+3. Open notes and record observations using the template below.
+
+Moderator Intro (30 seconds)
+"Please use this like a new app you just installed. Think out loud while using it. We are testing the product, not you. Any confusion is useful feedback."
+
+Tasks (about 8 minutes)
+
+1. First Upload (1 min)
+Task: Load Image A into the app.
+Observe: Can they quickly find upload? Do they understand current status?
+Pass: Upload completed and image displayed within 60 seconds.
+
+2. Go to Modification and perform two edits (1.5 min)
+Task: Rotate image 90 degrees and increase brightness slightly.
+Observe: Do they understand preview vs apply? Is status feedback clear?
+Pass: Both edits are completed and visible.
+
+3. Undo/Redo (1 min)
+Task: Undo once, then redo once.
+Observe: Is behavior predictable? Can user tell current state?
+Pass: Image state switches correctly both ways.
+
+4. Filter toggle and removal (1.5 min)
+Task: Apply a blur-like filter, then switch filter back to "None".
+Observe: Do they understand "None" means remove filter?
+Pass: Image returns to pre-filter state.
+
+5. Error recovery (1 min)
+Task: Open save flow and cancel; then drop/select a non-image file.
+Observe: Are error messages understandable and actionable?
+Pass: No crash; user can continue workflow.
+
+6. Replace image and save (2 min)
+Task: Load Image B, perform one edit, save it.
+Observe: Do they realize they are editing the new image? Is save flow smooth?
+Pass: Save succeeds and output matches expectation.
+
+Observation Template
+- Task 1: pass/fail, time, friction points
+- Task 2: pass/fail, time, friction points
+- Task 3: pass/fail, time, friction points
+- Task 4: pass/fail, time, friction points
+- Task 5: pass/fail, time, friction points
+- Task 6: pass/fail, time, friction points
+- Subjective scores (1-5):
+  - Learnability
+  - Confidence while operating
+  - Error message clarity
+- Top 3 user quotes:
+  1.
+  2.
+  3.
+
+Quick Acceptance Criteria
+1. At least 5 of 6 tasks complete on first attempt.
+2. No blocked confusion longer than 30 seconds.
+3. User can recover and continue after error scenarios.
