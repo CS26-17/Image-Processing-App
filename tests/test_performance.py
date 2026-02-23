@@ -5,7 +5,7 @@ from typing import List
 import pytest
 from PIL import Image
 
-from Image_Modification_Page import ImageModificationPage
+from tabs.Image_Modification_Page import ImageModificationPage
 
 
 def _repo_root() -> Path:
