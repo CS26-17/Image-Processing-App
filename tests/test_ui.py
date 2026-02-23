@@ -34,33 +34,38 @@ def test_window_constructs_and_has_tabs(window):
 
 
 def test_home_tab_buttons_exist(window):
-    assert window.upload_button is not None
-    assert window.clear_button is not None
-    assert window.process_button is not None
+    home_tab = window.home_tab
+    assert home_tab.upload_button is not None
+    assert home_tab.clear_button is not None
+    assert home_tab.process_button is not None
 
 
 def test_process_image_without_upload_sets_status(window, qtbot):
-    window.clear_image()
+    home_tab = window.home_tab
+    home_tab.clear_images()
 
-    qtbot.mouseClick(window.process_button, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(home_tab.process_button, Qt.MouseButton.LeftButton)
 
-    assert "upload" in window.status_label.text().lower()
+    assert "upload" in home_tab.status_label.text().lower()
 
 
 def test_process_image_after_loading_temp_image_switches_to_modification(window, qtbot, tmp_path):
     img_path = _create_temp_png(tmp_path)
+    home_tab = window.home_tab
 
-    window.display_image(img_path)
-    assert window.current_image_path == img_path
+    home_tab.display_image(img_path)
+    home_tab.current_image_path = img_path
+    assert home_tab.current_image_path == img_path
 
-    qtbot.mouseClick(window.process_button, Qt.MouseButton.LeftButton)
+    qtbot.mouseClick(home_tab.process_button, Qt.MouseButton.LeftButton)
 
     assert window.tab_widget.currentWidget() == window.modification_page
     assert window.modification_page.current_image is not None
 
 
 def test_clear_image_resets_state(window):
-    window.clear_image()
+    home_tab = window.home_tab
+    home_tab.clear_images()
 
-    assert window.current_image_path is None
-    assert "no image" in window.info_label.text().lower()
+    assert home_tab.current_image_path is None
+    assert "no image" in home_tab.info_label.text().lower()
