@@ -6,7 +6,8 @@ Simple image editing capabilities for the Image Processing App
 import sys
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout,
                                QPushButton, QLabel, QSlider, QGroupBox, QGridLayout,
-                               QFileDialog, QMessageBox, QSpinBox, QComboBox, QDoubleSpinBox)
+                               QFileDialog, QMessageBox, QSpinBox, QComboBox, QDoubleSpinBox,
+                               QScrollArea)
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QPixmap, QImage
 from PIL import Image, ImageEnhance, ImageFilter
@@ -52,13 +53,23 @@ class ImageModificationPage(QWidget):
         # Main layout
         main_layout = QHBoxLayout(self)
         
-        # Left side - Controls
-        controls_layout = QVBoxLayout()
+        # Left side - Controls (with scroll area)
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setMinimumWidth(350)
+        scroll_area.setMaximumWidth(450)
+        scroll_area.setStyleSheet("QScrollArea { background-color: white; border: none; }")
+        
+        scroll_widget = QWidget()
+        scroll_widget.setStyleSheet("background-color: white; color: black;")
+        controls_layout = QVBoxLayout(scroll_widget)
         controls_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         
-        # Image info
-        self.info_label = QLabel("No image loaded")
+        # Image info (hidden but kept for update_info method)
+        self.info_label = QLabel("")
         self.info_label.setStyleSheet("font-size: 14px; padding: 10px;")
+        self.info_label.hide()
         controls_layout.addWidget(self.info_label)
         
         # File operations
@@ -88,6 +99,8 @@ class ImageModificationPage(QWidget):
         # Add stretch to push everything to top
         controls_layout.addStretch()
         
+        scroll_area.setWidget(scroll_widget)
+        
         # Right side - Image display
         image_layout = QVBoxLayout()
         
@@ -99,11 +112,10 @@ class ImageModificationPage(QWidget):
                 border: 2px dashed #cccccc;
                 border-radius: 10px;
                 background-color: #f5f5f5;
-                min-width: 800px;
-                min-height: 600px;
             }
         """)
         self.image_label.setScaledContents(False)
+        self.image_label.setMinimumSize(400, 300)
         image_layout.addWidget(self.image_label)
         
         # Status label
@@ -121,8 +133,8 @@ class ImageModificationPage(QWidget):
         image_layout.addWidget(self.status_label)
         
         # Add layouts to main layout
-        main_layout.addLayout(controls_layout, 1)
-        main_layout.addLayout(image_layout, 3)
+        main_layout.addWidget(scroll_area)
+        main_layout.addLayout(image_layout, 1)
     
     def show_info_dialog(self, title, message):
         """Show information dialog with documentation"""
@@ -138,26 +150,23 @@ class ImageModificationPage(QWidget):
         group = QGroupBox("File Operations")
         layout = QVBoxLayout()
         
-        # Add info button
+        # Add title with info button
         header_layout = QHBoxLayout()
+        title_label = QLabel("File Operations")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
         info_btn = QPushButton("ℹ️")
         info_btn.setMaximumWidth(30)
-        info_btn.setStyleSheet("font-size: 14px; padding: 2px;")
+        info_btn.setStyleSheet("font-size: 14px; padding: 2px; background-color: transparent; border: none;")
         info_btn.clicked.connect(lambda: self.show_info_dialog(
             "File Operations",
             "<b>File Operations</b><br><br>"
-            "<b>Load Image:</b> Open an image file from your computer<br><br>"
             "<b>Save Image:</b> Save the current modified image to disk<br><br>"
             "<b>Reset to Original:</b> Discard all changes and restore the original image"
         ))
-        header_layout.addStretch()
         header_layout.addWidget(info_btn)
         layout.addLayout(header_layout)
-        
-        load_btn = QPushButton("Load Image")
-        load_btn.clicked.connect(self.load_image_dialog)
-        load_btn.setStyleSheet("padding: 8px; font-size: 12px;")
-        layout.addWidget(load_btn)
         
         save_btn = QPushButton("Save Image")
         save_btn.clicked.connect(self.save_image)
@@ -177,11 +186,15 @@ class ImageModificationPage(QWidget):
         group = QGroupBox("Transform")
         layout = QVBoxLayout()
         
-        # Add info button
+        # Add title with info button
         header_layout = QHBoxLayout()
+        title_label = QLabel("Transform Operations")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
         info_btn = QPushButton("ℹ️")
         info_btn.setMaximumWidth(30)
-        info_btn.setStyleSheet("font-size: 14px; padding: 2px;")
+        info_btn.setStyleSheet("font-size: 14px; padding: 2px; background-color: transparent; border: none;")
         info_btn.clicked.connect(lambda: self.show_info_dialog(
             "Transform Operations",
             "<b>Transform Operations</b><br><br>"
@@ -192,7 +205,6 @@ class ImageModificationPage(QWidget):
             "• Horizontal: Left ↔ Right<br>"
             "• Vertical: Top ↔ Bottom"
         ))
-        header_layout.addStretch()
         header_layout.addWidget(info_btn)
         layout.addLayout(header_layout)
         
@@ -245,11 +257,15 @@ class ImageModificationPage(QWidget):
         group = QGroupBox("Adjustments")
         layout = QVBoxLayout()
         
-        # Add info button
+        # Add title with info button
         header_layout = QHBoxLayout()
+        title_label = QLabel("Adjustments")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
         info_btn = QPushButton("ℹ️")
         info_btn.setMaximumWidth(30)
-        info_btn.setStyleSheet("font-size: 14px; padding: 2px;")
+        info_btn.setStyleSheet("font-size: 14px; padding: 2px; background-color: transparent; border: none;")
         info_btn.clicked.connect(lambda: self.show_info_dialog(
             "Image Adjustments",
             "<b>Image Adjustments</b><br><br>"
@@ -261,7 +277,6 @@ class ImageModificationPage(QWidget):
             "• 0.0 = Blurred, 1.0 = Original, 2.0 = Enhanced sharpness<br><br>"
             "<i>Adjustments are previewed in real-time. Click 'Apply Adjustments' to make them permanent.</i>"
         ))
-        header_layout.addStretch()
         header_layout.addWidget(info_btn)
         layout.addLayout(header_layout)
         
@@ -351,11 +366,15 @@ class ImageModificationPage(QWidget):
         group = QGroupBox("Filters")
         layout = QVBoxLayout()
         
-        # Add info button
+        # Add title with info button
         header_layout = QHBoxLayout()
+        title_label = QLabel("Filters")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
         info_btn = QPushButton("ℹ️")
         info_btn.setMaximumWidth(30)
-        info_btn.setStyleSheet("font-size: 14px; padding: 2px;")
+        info_btn.setStyleSheet("font-size: 14px; padding: 2px; background-color: transparent; border: none;")
         info_btn.clicked.connect(lambda: self.show_info_dialog(
             "Filters",
             "<b>Image Filters</b><br><br>"
@@ -369,11 +388,10 @@ class ImageModificationPage(QWidget):
             "<b>Find Edges:</b> Detect all edges in the image<br><br>"
             "<i>Tip: Parameters are preserved so you can apply the same filter repeatedly with consistent results.</i>"
         ))
-        header_layout.addStretch()
         header_layout.addWidget(info_btn)
         layout.addLayout(header_layout)
         
-        # Filter selection
+        # Filter selection with inline parameters
         filter_layout = QHBoxLayout()
         filter_label = QLabel("Filter:")
         self.filter_combo = QComboBox()
@@ -391,63 +409,52 @@ class ImageModificationPage(QWidget):
         self.filter_combo.currentTextChanged.connect(self.update_filter_params_visibility)
         filter_layout.addWidget(filter_label)
         filter_layout.addWidget(self.filter_combo)
-        layout.addLayout(filter_layout)
         
-        # Box Blur parameters
-        self.box_blur_layout = QHBoxLayout()
-        box_blur_label = QLabel("Radius:")
+        # Box Blur parameters (inline)
+        self.box_blur_label = QLabel("Radius:")
         self.box_blur_spin = QSpinBox()
         self.box_blur_spin.setMinimum(1)
         self.box_blur_spin.setMaximum(10)
         self.box_blur_spin.setValue(2)
         self.box_blur_spin.setToolTip("Blur radius in pixels (1-10)")
-        self.box_blur_layout.addWidget(box_blur_label)
-        self.box_blur_layout.addWidget(self.box_blur_spin)
-        self.box_blur_layout.addStretch()
-        layout.addLayout(self.box_blur_layout)
+        filter_layout.addWidget(self.box_blur_label)
+        filter_layout.addWidget(self.box_blur_spin)
         
-        # Gaussian Blur parameters
-        self.gaussian_blur_layout = QHBoxLayout()
-        gaussian_blur_label = QLabel("Radius:")
+        # Gaussian Blur parameters (inline)
+        self.gaussian_blur_label = QLabel("Radius:")
         self.gaussian_blur_spin = QSpinBox()
         self.gaussian_blur_spin.setMinimum(1)
         self.gaussian_blur_spin.setMaximum(20)
         self.gaussian_blur_spin.setValue(2)
         self.gaussian_blur_spin.setToolTip("Gaussian blur radius in pixels (1-20)")
-        self.gaussian_blur_layout.addWidget(gaussian_blur_label)
-        self.gaussian_blur_layout.addWidget(self.gaussian_blur_spin)
-        self.gaussian_blur_layout.addStretch()
-        layout.addLayout(self.gaussian_blur_layout)
+        filter_layout.addWidget(self.gaussian_blur_label)
+        filter_layout.addWidget(self.gaussian_blur_spin)
         
-        # Sharpen parameters
-        self.sharpen_layout = QHBoxLayout()
-        sharpen_label = QLabel("Factor:")
+        # Sharpen parameters (inline)
+        self.sharpen_label = QLabel("Factor:")
         self.sharpen_spin = QDoubleSpinBox()
         self.sharpen_spin.setMinimum(0.5)
         self.sharpen_spin.setMaximum(3.0)
         self.sharpen_spin.setValue(1.0)
         self.sharpen_spin.setSingleStep(0.1)
         self.sharpen_spin.setToolTip("Sharpen factor (0.5-3.0, 1.0=normal)")
-        self.sharpen_layout.addWidget(sharpen_label)
-        self.sharpen_layout.addWidget(self.sharpen_spin)
-        self.sharpen_layout.addStretch()
-        layout.addLayout(self.sharpen_layout)
+        filter_layout.addWidget(self.sharpen_label)
+        filter_layout.addWidget(self.sharpen_spin)
         
-        # Edge Enhance parameters
-        self.edge_layout = QHBoxLayout()
-        edge_label = QLabel("Factor:")
+        # Edge Enhance parameters (inline)
+        self.edge_label = QLabel("Factor:")
         self.edge_spin = QDoubleSpinBox()
         self.edge_spin.setMinimum(1.0)
         self.edge_spin.setMaximum(5.0)
         self.edge_spin.setValue(1.0)
         self.edge_spin.setSingleStep(0.1)
         self.edge_spin.setToolTip("Edge enhancement factor (1.0-5.0)")
-        self.edge_layout.addWidget(edge_label)
-        self.edge_layout.addWidget(self.edge_spin)
-        self.edge_layout.addStretch()
-        layout.addLayout(self.edge_layout)
+        filter_layout.addWidget(self.edge_label)
+        filter_layout.addWidget(self.edge_spin)
+        filter_layout.addStretch()
+        layout.addLayout(filter_layout)
         
-        # Initially hide all parameter layouts
+        # Initially hide all parameter widgets
         self.update_filter_params_visibility("None")
         
         apply_filter_btn = QPushButton("Apply Filter")
@@ -463,11 +470,15 @@ class ImageModificationPage(QWidget):
         group = QGroupBox("Resize")
         layout = QVBoxLayout()
         
-        # Add info button
+        # Add title with info button
         header_layout = QHBoxLayout()
+        title_label = QLabel("Resize")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
         info_btn = QPushButton("ℹ️")
         info_btn.setMaximumWidth(30)
-        info_btn.setStyleSheet("font-size: 14px; padding: 2px;")
+        info_btn.setStyleSheet("font-size: 14px; padding: 2px; background-color: transparent; border: none;")
         info_btn.clicked.connect(lambda: self.show_info_dialog(
             "Resize",
             "<b>Resize Image</b><br><br>"
@@ -479,7 +490,6 @@ class ImageModificationPage(QWidget):
             "• <b>Nearest:</b> Fastest, preserves hard edges (pixel art)<br><br>"
             "<i>Tip: Use Lanczos for photographs, Nearest for pixel art.</i>"
         ))
-        header_layout.addStretch()
         header_layout.addWidget(info_btn)
         layout.addLayout(header_layout)
         
@@ -504,16 +514,6 @@ class ImageModificationPage(QWidget):
         size_layout.addWidget(self.height_spin)
         layout.addLayout(size_layout)
         
-        # Interpolation method
-        interp_layout = QHBoxLayout()
-        interp_label = QLabel("Method:")
-        self.interpolation_combo = QComboBox()
-        self.interpolation_combo.addItems(["Lanczos", "Bicubic", "Bilinear", "Nearest"])
-        self.interpolation_combo.setToolTip("Resampling method for resize operation")
-        interp_layout.addWidget(interp_label)
-        interp_layout.addWidget(self.interpolation_combo)
-        layout.addLayout(interp_layout)
-        
         # Resize button
         resize_btn = QPushButton("Resize Image")
         resize_btn.clicked.connect(self.resize_image)
@@ -525,55 +525,44 @@ class ImageModificationPage(QWidget):
     
     def update_filter_params_visibility(self, filter_name):
         """Show/hide filter parameters based on selected filter"""
-        # Hide all parameter layouts
-        for i in range(self.box_blur_layout.count()):
-            widget = self.box_blur_layout.itemAt(i).widget()
-            if widget:
-                widget.hide()
-        for i in range(self.gaussian_blur_layout.count()):
-            widget = self.gaussian_blur_layout.itemAt(i).widget()
-            if widget:
-                widget.hide()
-        for i in range(self.sharpen_layout.count()):
-            widget = self.sharpen_layout.itemAt(i).widget()
-            if widget:
-                widget.hide()
-        for i in range(self.edge_layout.count()):
-            widget = self.edge_layout.itemAt(i).widget()
-            if widget:
-                widget.hide()
+        # Hide all parameter widgets
+        self.box_blur_label.hide()
+        self.box_blur_spin.hide()
+        self.gaussian_blur_label.hide()
+        self.gaussian_blur_spin.hide()
+        self.sharpen_label.hide()
+        self.sharpen_spin.hide()
+        self.edge_label.hide()
+        self.edge_spin.hide()
         
-        # Show relevant parameter layout
+        # Show relevant parameter widgets
         if filter_name == "Box Blur":
-            for i in range(self.box_blur_layout.count()):
-                widget = self.box_blur_layout.itemAt(i).widget()
-                if widget:
-                    widget.show()
+            self.box_blur_label.show()
+            self.box_blur_spin.show()
         elif filter_name == "Gaussian Blur":
-            for i in range(self.gaussian_blur_layout.count()):
-                widget = self.gaussian_blur_layout.itemAt(i).widget()
-                if widget:
-                    widget.show()
+            self.gaussian_blur_label.show()
+            self.gaussian_blur_spin.show()
         elif filter_name == "Sharpen":
-            for i in range(self.sharpen_layout.count()):
-                widget = self.sharpen_layout.itemAt(i).widget()
-                if widget:
-                    widget.show()
+            self.sharpen_label.show()
+            self.sharpen_spin.show()
         elif filter_name == "Edge Enhance":
-            for i in range(self.edge_layout.count()):
-                widget = self.edge_layout.itemAt(i).widget()
-                if widget:
-                    widget.show()
-    
+            self.edge_label.show()
+            self.edge_spin.show()
+
     def create_history_group(self):
         """Create history/undo group"""
         group = QGroupBox("History")
-        layout = QHBoxLayout()
+        layout = QVBoxLayout()
         
-        # Add info button
+        # Add title with info button
+        header_layout = QHBoxLayout()
+        title_label = QLabel("History")
+        title_label.setStyleSheet("font-weight: bold; font-size: 14px; color: #2c3e50;")
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
         info_btn = QPushButton("ℹ️")
         info_btn.setMaximumWidth(30)
-        info_btn.setStyleSheet("font-size: 14px; padding: 2px;")
+        info_btn.setStyleSheet("font-size: 14px; padding: 2px; background-color: transparent; border: none;")
         info_btn.clicked.connect(lambda: self.show_info_dialog(
             "History",
             "<b>History Controls</b><br><br>"
@@ -581,17 +570,28 @@ class ImageModificationPage(QWidget):
             "<b>Redo:</b> Reapply a previously undone modification<br><br>"
             "<i>Up to 50 operations are stored in history.</i>"
         ))
-        layout.addWidget(info_btn)
+        header_layout.addWidget(info_btn)
+        layout.addLayout(header_layout)
+        
+        # Section title
+        section_title = QLabel("Undo and Redo")
+        section_title.setStyleSheet("font-weight: bold; font-size: 12px; color: #2c3e50;")
+        layout.addWidget(section_title)
+        
+        # Buttons layout
+        buttons_layout = QHBoxLayout()
         
         undo_btn = QPushButton("⟲ Undo")
         undo_btn.clicked.connect(self.undo)
         undo_btn.setStyleSheet("padding: 8px;")
-        layout.addWidget(undo_btn)
+        buttons_layout.addWidget(undo_btn)
         
         redo_btn = QPushButton("⟳ Redo")
         redo_btn.clicked.connect(self.redo)
         redo_btn.setStyleSheet("padding: 8px;")
-        layout.addWidget(redo_btn)
+        buttons_layout.addWidget(redo_btn)
+        
+        layout.addLayout(buttons_layout)
         
         group.setLayout(layout)
         return group
@@ -683,7 +683,13 @@ class ImageModificationPage(QWidget):
             return
         
         try:
-            rotated = self.current_image.rotate(-degrees, expand=True)
+            # Use expand=True to prevent cropping, resample for quality, fillcolor for corners
+            rotated = self.current_image.rotate(
+                -degrees, 
+                resample=Image.Resampling.BICUBIC,
+                expand=True, 
+                fillcolor=(255, 255, 255)
+            )
             self.current_image = rotated
             self.add_to_history(self.current_image)
             # Reset pre-filter state after permanent change
@@ -852,7 +858,7 @@ class ImageModificationPage(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to apply filter: {str(e)}")
     
     def resize_image(self):
-        """Resize image to specified dimensions with chosen interpolation"""
+        """Resize image to specified dimensions"""
         if self.current_image is None:
             return
         
@@ -860,25 +866,15 @@ class ImageModificationPage(QWidget):
             new_width = self.width_spin.value()
             new_height = self.height_spin.value()
             
-            # Get interpolation method
-            interp_method = self.interpolation_combo.currentText()
-            if interp_method == "Lanczos":
-                resampling = Image.Resampling.LANCZOS
-            elif interp_method == "Bicubic":
-                resampling = Image.Resampling.BICUBIC
-            elif interp_method == "Bilinear":
-                resampling = Image.Resampling.BILINEAR
-            else:  # Nearest
-                resampling = Image.Resampling.NEAREST
-            
-            resized = self.current_image.resize((new_width, new_height), resampling)
+            # Use Lanczos interpolation (highest quality)
+            resized = self.current_image.resize((new_width, new_height), Image.Resampling.LANCZOS)
             self.current_image = resized
             self.add_to_history(self.current_image)
             # Reset pre-filter state after permanent change
             self.pre_filter_image = None
             self.display_image(self.current_image)
             self.update_info()
-            self.status_label.setText(f"Resized to {new_width}x{new_height} ({interp_method})")
+            self.status_label.setText(f"Resized to {new_width}x{new_height}")
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to resize: {str(e)}")
