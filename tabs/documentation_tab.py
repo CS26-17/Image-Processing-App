@@ -5,11 +5,10 @@ Documentation Tab - Application documentation and user guide
 import os
 import shutil
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QTextBrowser, QPushButton, QFrame, QScrollArea,
-                             QSplitter, QListWidget, QListWidgetItem, QFileDialog,
-                             QMessageBox)
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QFont, QDesktopServices
+                             QTextBrowser, QPushButton, QFrame, QSplitter,
+                             QListWidget, QFileDialog, QMessageBox, QLineEdit)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QFont
 
 
 class DocumentationTab(QWidget):
@@ -25,30 +24,59 @@ class DocumentationTab(QWidget):
     def setup_ui(self):
         """Setup the documentation tab UI"""
         main_layout = QHBoxLayout(self)
-        main_layout.setContentsMargins(10, 10, 10, 10)
+        main_layout.setContentsMargins(12, 12, 12, 12)
+        main_layout.setSpacing(12)
         
         # Create splitter for navigation and content
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setHandleWidth(6)
         
         # Left side - Navigation
         self.nav_frame = QFrame()
-        self.nav_frame.setMaximumWidth(250)
+        self.nav_frame.setMaximumWidth(300)
+        self.nav_frame.setMinimumWidth(250)
         self.nav_frame.setStyleSheet("""
             QFrame {
-                background-color: #f8f9fa;
-                border-right: 1px solid #dee2e6;
-                border-radius: 4px;
+                background-color: #f7f9fc;
+                border: 1px solid #d8e1eb;
+                border-radius: 8px;
             }
         """)
         
         nav_layout = QVBoxLayout(self.nav_frame)
+        nav_layout.setContentsMargins(10, 10, 10, 10)
+        nav_layout.setSpacing(8)
         
         # Navigation header
-        nav_header = QLabel("Documentation")
-        nav_header.setFont(QFont("Arial", 14, QFont.Weight.Bold))
-        nav_header.setStyleSheet("color: #000000; padding: 15px; border-bottom: 1px solid #dee2e6;")
-        nav_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        nav_header = QLabel("Documentation Center")
+        nav_header.setFont(QFont("Arial", 15, QFont.Weight.Bold))
+        nav_header.setStyleSheet(
+            "color: #102a43; padding: 10px 8px 6px 8px; border: none;"
+        )
+        nav_header.setAlignment(Qt.AlignmentFlag.AlignLeft)
         nav_layout.addWidget(nav_header)
+
+        self.nav_subtitle = QLabel("Browse guides and reference material")
+        self.nav_subtitle.setStyleSheet("color: #486581; font-size: 12px; padding: 0 8px 8px 8px;")
+        nav_layout.addWidget(self.nav_subtitle)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search sections...")
+        self.search_input.setStyleSheet("""
+            QLineEdit {
+                background-color: white;
+                border: 1px solid #bcccdc;
+                border-radius: 6px;
+                padding: 8px 10px;
+                color: #102a43;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #2f80ed;
+            }
+        """)
+        self.search_input.textChanged.connect(self.filter_navigation)
+        nav_layout.addWidget(self.search_input)
         
         # Navigation list
         self.nav_list = QListWidget()
@@ -57,45 +85,45 @@ class DocumentationTab(QWidget):
                 background-color: transparent;
                 border: none;
                 font-size: 13px;
-                color: #000000;
+                color: #102a43;
+                outline: 0;
             }
             QListWidget::item {
-                padding: 12px 15px;
-                border-bottom: 1px solid #e9ecef;
-                color: #000000;
+                padding: 10px 12px;
+                border-radius: 6px;
+                margin: 1px 0;
+                color: #102a43;
             }
             QListWidget::item:selected {
-                background-color: #2196F3;
+                background-color: #2f80ed;
                 color: white;
-                border-radius: 4px;
             }
             QListWidget::item:hover {
-                background-color: #e3f2fd;
-                border-radius: 4px;
-                color: #000000;
+                background-color: #eaf2ff;
+                color: #102a43;
             }
         """)
         
         # Add navigation items
-        nav_items = [
-            "📖 Getting Started",
-            "🖼️ Image Upload Guide", 
-            "🖊️ Image Modification",
-            "🔍 Image Analysis",
-            "📊 Results Interpretation",
-            "❓ Troubleshooting",
-            "🎹 Keyboard Shortcuts",
-            "🔧 API Reference"
+        self.nav_items = [
+            "Getting Started",
+            "Image Upload Guide",
+            "Image Modification",
+            "Image Analysis",
+            "Results Interpretation",
+            "Troubleshooting",
+            "Keyboard Shortcuts",
+            "API Reference",
         ]
         
-        for item in nav_items:
+        for item in self.nav_items:
             self.nav_list.addItem(item)
         
         self.nav_list.currentRowChanged.connect(self.on_nav_changed)
         nav_layout.addWidget(self.nav_list)
         
-        # PDF Download button
-        pdf_button = QPushButton("📥 Download User Manual (PDF)")
+        # User manual download button (supports PDF/Word selection)
+        pdf_button = QPushButton("📥 Download User Manual")
         pdf_button.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -117,7 +145,29 @@ class DocumentationTab(QWidget):
         
         # Right side - Content
         self.content_frame = QFrame()
+        self.content_frame.setStyleSheet("""
+            QFrame {
+                background-color: #fdfefe;
+                border: 1px solid #d8e1eb;
+                border-radius: 8px;
+            }
+        """)
         content_layout = QVBoxLayout(self.content_frame)
+        content_layout.setContentsMargins(14, 12, 14, 12)
+        content_layout.setSpacing(10)
+
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(2)
+
+        self.section_path_label = QLabel("Documentation")
+        self.section_path_label.setStyleSheet("color: #627d98; font-size: 12px;")
+        header_layout.addWidget(self.section_path_label)
+
+        self.section_title_label = QLabel("Getting Started")
+        self.section_title_label.setFont(QFont("Arial", 16, QFont.Weight.Bold))
+        self.section_title_label.setStyleSheet("color: #102a43;")
+        header_layout.addWidget(self.section_title_label)
+        content_layout.addLayout(header_layout)
         
         # Content browser
         self.content_browser = QTextBrowser()
@@ -125,73 +175,133 @@ class DocumentationTab(QWidget):
         self.content_browser.setStyleSheet("""
             QTextBrowser {
                 background-color: white;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 20px;
-                font-size: 14px;
-                line-height: 1.6;
-                color: #000000;
+                border: 1px solid #d8e1eb;
+                border-radius: 8px;
+                padding: 24px;
+                font-size: 15px;
+                line-height: 1.7;
+                color: #102a43;
             }
             QTextBrowser h1 {
-                color: #000000;
+                color: #102a43;
                 font-size: 24px;
-                margin-bottom: 20px;
+                margin-bottom: 14px;
             }
             QTextBrowser h2 {
-                color: #000000;
+                color: #243b53;
                 font-size: 20px;
-                margin-top: 25px;
-                margin-bottom: 15px;
+                margin-top: 22px;
+                margin-bottom: 12px;
             }
             QTextBrowser h3 {
-                color: #000000;
+                color: #334e68;
                 font-size: 16px;
-                margin-top: 20px;
+                margin-top: 16px;
                 margin-bottom: 10px;
             }
             QTextBrowser p {
-                margin-bottom: 15px;
-                color: #000000;
+                margin-bottom: 12px;
+                color: #102a43;
             }
             QTextBrowser ul, QTextBrowser ol {
-                margin: 10px 0px 10px 20px;
-                color: #000000;
+                margin: 8px 0px 10px 20px;
+                color: #102a43;
             }
             QTextBrowser li {
-                margin-bottom: 8px;
-                color: #000000;
+                margin-bottom: 6px;
+                color: #102a43;
             }
             QTextBrowser code {
-                background-color: #f8f9fa;
+                background-color: #eaf2ff;
                 padding: 2px 6px;
                 border-radius: 3px;
                 font-family: 'Courier New';
-                color: #000000;
+                color: #243b53;
             }
             QTextBrowser pre {
-                background-color: #f8f9fa;
+                background-color: #f7f9fc;
                 padding: 15px;
                 border-radius: 5px;
-                border-left: 4px solid #2196F3;
+                border-left: 4px solid #2f80ed;
                 margin: 15px 0px;
                 font-family: 'Courier New';
                 white-space: pre-wrap;
-                color: #000000;
+                color: #102a43;
             }
             QTextBrowser table {
-                color: #000000;
+                color: #102a43;
             }
             QTextBrowser th, QTextBrowser td {
-                color: #000000;
+                color: #102a43;
             }
         """)
+        self.content_browser.setMinimumWidth(650)
+        self.content_browser.setMaximumWidth(940)
         
-        content_layout.addWidget(self.content_browser)
+        browser_row = QHBoxLayout()
+        browser_row.addStretch()
+        browser_row.addWidget(self.content_browser, stretch=1)
+        browser_row.addStretch()
+        content_layout.addLayout(browser_row, stretch=1)
+
+        controls_layout = QHBoxLayout()
+        controls_layout.setSpacing(8)
+
+        self.prev_button = QPushButton("Previous")
+        self.prev_button.clicked.connect(self.go_previous_section)
+        self.prev_button.setStyleSheet("""
+            QPushButton {
+                background-color: #f0f4f8;
+                color: #102a43;
+                border: 1px solid #bcccdc;
+                border-radius: 6px;
+                padding: 7px 12px;
+            }
+            QPushButton:hover {
+                background-color: #d9e2ec;
+            }
+        """)
+        controls_layout.addWidget(self.prev_button)
+
+        self.next_button = QPushButton("Next")
+        self.next_button.clicked.connect(self.go_next_section)
+        self.next_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2f80ed;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 7px 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1f6cd0;
+            }
+        """)
+        controls_layout.addWidget(self.next_button)
+        controls_layout.addStretch()
+
+        top_button = QPushButton("Back to Top")
+        top_button.clicked.connect(self.scroll_to_top)
+        top_button.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                color: #334e68;
+                border: 1px solid #bcccdc;
+                border-radius: 6px;
+                padding: 7px 12px;
+            }
+            QPushButton:hover {
+                background-color: #f0f4f8;
+            }
+        """)
+        controls_layout.addWidget(top_button)
+        content_layout.addLayout(controls_layout)
         
         # Add frames to splitter
         splitter.addWidget(self.nav_frame)
         splitter.addWidget(self.content_frame)
-        splitter.setSizes([200, 600])  # Initial sizes
+        splitter.setSizes([270, 780])  # Initial sizes
         
         main_layout.addWidget(splitter)
     
@@ -216,52 +326,142 @@ class DocumentationTab(QWidget):
         """Handle navigation item selection"""
         if row >= 0 and row < len(self.docs_content):
             self.content_browser.setHtml(self.docs_content[row])
+            self.section_title_label.setText(self.nav_items[row])
+            self.section_path_label.setText(f"Documentation > {self.nav_items[row]}")
+            self.prev_button.setEnabled(self._has_visible_before(row))
+            self.next_button.setEnabled(self._has_visible_after(row))
+
+    def filter_navigation(self, text):
+        """Filter visible sections based on search text."""
+        query = text.strip().lower()
+        first_visible = None
+
+        for idx in range(self.nav_list.count()):
+            item = self.nav_list.item(idx)
+            is_match = query in item.text().lower()
+            item.setHidden(not is_match)
+            if is_match and first_visible is None:
+                first_visible = idx
+
+        current_item = self.nav_list.currentItem()
+        if current_item and current_item.isHidden():
+            if first_visible is not None:
+                self.nav_list.setCurrentRow(first_visible)
+            else:
+                self.section_title_label.setText("No section found")
+                self.section_path_label.setText("Documentation")
+                self.content_browser.setHtml(
+                    "<h2>No matching section</h2><p>Try a different search keyword.</p>"
+                )
+                self.prev_button.setEnabled(False)
+                self.next_button.setEnabled(False)
+        elif self.nav_list.currentRow() >= 0:
+            row = self.nav_list.currentRow()
+            self.prev_button.setEnabled(self._has_visible_before(row))
+            self.next_button.setEnabled(self._has_visible_after(row))
+
+    def go_previous_section(self):
+        """Go to previous visible section."""
+        current_row = self.nav_list.currentRow()
+        for row in range(current_row - 1, -1, -1):
+            if not self.nav_list.item(row).isHidden():
+                self.nav_list.setCurrentRow(row)
+                return
+
+    def go_next_section(self):
+        """Go to next visible section."""
+        current_row = self.nav_list.currentRow()
+        for row in range(current_row + 1, self.nav_list.count()):
+            if not self.nav_list.item(row).isHidden():
+                self.nav_list.setCurrentRow(row)
+                return
+
+    def scroll_to_top(self):
+        """Scroll documentation content to top."""
+        self.content_browser.verticalScrollBar().setValue(0)
+
+    def _has_visible_before(self, row):
+        for idx in range(row - 1, -1, -1):
+            if not self.nav_list.item(idx).isHidden():
+                return True
+        return False
+
+    def _has_visible_after(self, row):
+        for idx in range(row + 1, self.nav_list.count()):
+            if not self.nav_list.item(idx).isHidden():
+                return True
+        return False
     
     def download_user_manual(self):
-        """Download the user manual from the project root."""
+        """Download user manual from the project root with PDF/Word choice."""
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-        # Prefer PDF if present, then Word docs.
+        # Locate candidates by type.
+        manual_files = {"pdf": [], "word": []}
         candidate_names = [
             "Image-Processing-App User Manual.pdf",
+            "Image-Processing-App User Manual 26.docx.pdf",
             "Image-Processing-App User Manual 26.docx",
+            "Image-Processing-App User Manual.docx",
+            "Image-Processing-App User Manual.doc",
         ]
-        manual_path = None
 
         for name in candidate_names:
             path = os.path.join(project_root, name)
-            if os.path.isfile(path):
-                manual_path = path
-                break
+            if not os.path.isfile(path):
+                continue
+            lower_name = name.lower()
+            if lower_name.endswith(".pdf"):
+                manual_files["pdf"].append(path)
+            elif lower_name.endswith((".docx", ".doc")):
+                manual_files["word"].append(path)
 
         # Fallback: find any file in root that looks like a user manual.
-        if manual_path is None:
-            allowed_ext = (".pdf", ".docx", ".doc")
+        if not manual_files["pdf"] or not manual_files["word"]:
             for entry in os.listdir(project_root):
+                path = os.path.join(project_root, entry)
+                if not os.path.isfile(path):
+                    continue
                 lower_entry = entry.lower()
-                if "user manual" in lower_entry and lower_entry.endswith(allowed_ext):
-                    path = os.path.join(project_root, entry)
-                    if os.path.isfile(path):
-                        manual_path = path
-                        break
+                if "user manual" not in lower_entry:
+                    continue
+                if lower_entry.endswith(".pdf") and path not in manual_files["pdf"]:
+                    manual_files["pdf"].append(path)
+                elif lower_entry.endswith((".docx", ".doc")) and path not in manual_files["word"]:
+                    manual_files["word"].append(path)
 
-        if manual_path is None:
+        has_pdf = bool(manual_files["pdf"])
+        has_word = bool(manual_files["word"])
+        if not has_pdf and not has_word:
             QMessageBox.warning(
                 self,
                 "Manual Not Found",
-                "Could not find a user manual file in the project root folder.",
+                "Could not find a user manual (PDF/Word) file in the project root folder.",
             )
             return
 
+        # Let user choose preferred format when both are available.
+        selected_type = "pdf" if has_pdf else "word"
+        if has_pdf and has_word:
+            choice_box = QMessageBox(self)
+            choice_box.setWindowTitle("Choose File Format")
+            choice_box.setText("Please choose a format for the user manual download:")
+            pdf_btn = choice_box.addButton("PDF", QMessageBox.ButtonRole.AcceptRole)
+            word_btn = choice_box.addButton("Word", QMessageBox.ButtonRole.AcceptRole)
+            choice_box.addButton(QMessageBox.StandardButton.Cancel)
+            choice_box.exec()
+
+            clicked = choice_box.clickedButton()
+            if clicked is None or clicked == choice_box.button(QMessageBox.StandardButton.Cancel):
+                return
+            selected_type = "pdf" if clicked == pdf_btn else "word"
+
+        manual_path = manual_files[selected_type][0]
         default_name = os.path.basename(manual_path)
-        _, ext = os.path.splitext(default_name)
-        ext = ext.lower()
-        if ext == ".pdf":
+        if selected_type == "pdf":
             file_filter = "PDF Files (*.pdf);;All Files (*)"
-        elif ext in (".docx", ".doc"):
-            file_filter = "Word Documents (*.docx *.doc);;All Files (*)"
         else:
-            file_filter = "All Files (*)"
+            file_filter = "Word Documents (*.docx *.doc);;All Files (*)"
 
         save_path, _ = QFileDialog.getSaveFileName(
             self,
