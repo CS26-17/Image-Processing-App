@@ -9,6 +9,7 @@ from tabs.Image_Modification_Page import ImageModificationPage
 from tabs.results_tab import ResultsTab
 from tabs.documentation_tab import DocumentationTab
 from tabs.home_tab import HomeTab
+from tabs.analysis_setup_tab import AnalysisSetupTab
 
 
 class ImageProcessingApp(QMainWindow):
@@ -86,33 +87,8 @@ class ImageProcessingApp(QMainWindow):
         self.tab_widget.addTab(self.modification_page, "🛠️ Modification")
 
         # Analysis Setup Tab (simple placeholder, as before)
-        analysis_widget = QWidget()
-        analysis_layout = QVBoxLayout(analysis_widget)
-        analysis_layout.setContentsMargins(30, 30, 30, 30)
-
-        analysis_label = QLabel("Analysis Configuration")
-        analysis_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        analysis_label.setStyleSheet(
-            "font-size: 20px; font-weight: bold; color: #2c3e50; margin: 20px;"
-        )
-        analysis_layout.addWidget(analysis_label)
-
-        analysis_content = QLabel(
-            "Configure analysis parameters and settings.\n\n"
-            "• Algorithm selection\n"
-            "• Parameter tuning\n"
-            "• Output format\n"
-            "• Automation settings"
-        )
-        analysis_content.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        analysis_content.setStyleSheet(
-            "font-size: 14px; color: #7f8c8d; margin: 20px;"
-        )
-        analysis_content.setWordWrap(True)
-        analysis_layout.addWidget(analysis_content)
-
-        analysis_layout.addStretch()
-        self.tab_widget.addTab(analysis_widget, "⚙️ Analysis Setup")
+        self.analysis_setup_tab = AnalysisSetupTab()
+        self.tab_widget.addTab(self.analysis_setup_tab, "⚙️ Analysis Setup")
 
 
 def main() -> None:
