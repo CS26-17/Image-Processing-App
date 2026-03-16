@@ -30,10 +30,10 @@ class SectionWidget(QFrame):
                 margin: 10px 0;
             }
         """)
-        
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(5, 5, 5, 5)
-        
+
         # Section title
         title_label = QLabel(title)
         title_label.setStyleSheet("""
@@ -47,7 +47,7 @@ class SectionWidget(QFrame):
             }
         """)
         layout.addWidget(title_label)
-        
+
         # Content container
         self.content = QWidget()
         self.content_layout = QVBoxLayout(self.content)
@@ -71,37 +71,37 @@ class ResultsTab(QWidget):
         self.selected_img1 = None     # Currently selected image filenames
         self.selected_img2 = None
         self.setup_ui()
-    
+
     def setup_ui(self):
         """Setup the results tab UI"""
         # Main layout with scroll area
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(15, 15, 15, 15)
-        
+
         # Create scroll area
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
-        
+
         # Container widget for scroll area
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
         scroll_layout.setContentsMargins(5, 5, 5, 5)
         scroll_layout.setSpacing(15)
-        
+
         # File loading section
         file_section = SectionWidget("Load Results")
         file_layout = QHBoxLayout()
-        
+
         btn_load_csv = QPushButton("Load Similarity CSV")
         btn_load_csv.clicked.connect(self.load_similarity_csv)
-        
+
         btn_load_heatmap = QPushButton("Load Heatmap Image")
         btn_load_heatmap.clicked.connect(self.load_heatmap_image)
-        
+
         btn_auto_load = QPushButton("Auto-Load from Results Folder")
         btn_auto_load.clicked.connect(self.auto_load_results)
-        
+
         for btn in [btn_load_csv, btn_load_heatmap, btn_auto_load]:
             btn.setStyleSheet("""
                 QPushButton {
@@ -118,10 +118,10 @@ class ResultsTab(QWidget):
                 }
             """)
             file_layout.addWidget(btn)
-        
+
         file_section.content_layout.addLayout(file_layout)
         scroll_layout.addWidget(file_section)
-        
+
         # 1. Image Display Section
         self.image_section = SectionWidget("Image Preview")
         self.image_label = QLabel("No image loaded")
@@ -139,14 +139,14 @@ class ResultsTab(QWidget):
         """)
         self.image_section.content_layout.addWidget(self.image_label)
         scroll_layout.addWidget(self.image_section)
-        
+
         # 2. Image Statistics Section
         self.stats_section = SectionWidget("Image Statistics")
         self.stats_placeholder = QLabel("Image statistics will be displayed here")
         self.stats_placeholder.setStyleSheet("color: #6b7280; font-style: italic;")
         self.stats_section.content_layout.addWidget(self.stats_placeholder)
         scroll_layout.addWidget(self.stats_section)
-        
+
         # 3. Analysis Results Section - Using tabs for organization
         self.analysis_section = SectionWidget("Analysis Results")
 
@@ -380,7 +380,7 @@ class ResultsTab(QWidget):
 
         self.analysis_section.content_layout.addWidget(self.results_tabs)
         scroll_layout.addWidget(self.analysis_section)
-        
+
         # 4. Comparison Section
         self.comparison_section = SectionWidget("Image Comparison")
 
@@ -504,18 +504,18 @@ class ResultsTab(QWidget):
 
         self.comparison_section.content_layout.addWidget(comparison_container)
         scroll_layout.addWidget(self.comparison_section)
-        
+
         # 5. Export Section
         self.export_section = SectionWidget("Export Options")
-        
+
         # Export buttons
         button_layout = QHBoxLayout()
-        
+
         btn_export_png = QPushButton("Export as PNG")
         btn_export_jpg = QPushButton("Export as JPG")
         btn_export_pdf = QPushButton("Export as PDF")
         btn_export_csv = QPushButton("Export Data (CSV)")
-        
+
         # Style buttons
         for btn in [btn_export_png, btn_export_jpg, btn_export_pdf, btn_export_csv]:
             btn.setStyleSheet("""
@@ -533,10 +533,10 @@ class ResultsTab(QWidget):
                 }
             """)
             button_layout.addWidget(btn)
-        
+
         self.export_section.content_layout.addLayout(button_layout)
         scroll_layout.addWidget(self.export_section)
-        
+
         # Connect table cell clicks to image comparison
         self.similarity_table.cellClicked.connect(self.on_matrix_cell_clicked)
         self.filtered_table.cellClicked.connect(self.on_matrix_cell_clicked)
@@ -548,16 +548,16 @@ class ResultsTab(QWidget):
         # Set up scroll area
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll)
-    
+
     def _create_metric_widget(self, name, value):
         """Helper to create a metric display widget"""
         container = QWidget()
         layout = QVBoxLayout(container)
         layout.setContentsMargins(5, 5, 5, 5)
-        
+
         name_label = QLabel(name)
         name_label.setStyleSheet("color: #6b7280; font-size: 13px;")
-        
+
         value_label = QLabel(value)
         value_label.setStyleSheet("""
             QLabel {
@@ -566,17 +566,17 @@ class ResultsTab(QWidget):
                 color: #111827;
             }
         """)
-        
+
         layout.addWidget(name_label)
         layout.addWidget(value_label)
-        
+
         return container
-    
+
     def _create_comparison_box(self, title):
         """Helper to create a comparison box"""
         container = QWidget()
         layout = QVBoxLayout(container)
-        
+
         title_label = QLabel(title)
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title_label.setStyleSheet("""
@@ -586,7 +586,7 @@ class ResultsTab(QWidget):
                 margin-bottom: 5px;
             }
         """)
-        
+
         image_box = QLabel("No image")
         image_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
         image_box.setMinimumSize(200, 150)
@@ -598,21 +598,21 @@ class ResultsTab(QWidget):
                 color: #9ca3af;
             }
         """)
-        
+
         layout.addWidget(title_label)
         layout.addWidget(image_box)
-        
+
         return container
-    
+
     def load_similarity_csv(self):
         """Load similarity data from CSV file"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, 
-            "Load Similarity CSV", 
-            "", 
+            self,
+            "Load Similarity CSV",
+            "",
             "CSV Files (*.csv);;All Files (*)"
         )
-        
+
         if file_path:
             try:
                 self.similarity_data = pd.read_csv(file_path, index_col=0)
@@ -621,16 +621,16 @@ class ResultsTab(QWidget):
                 QMessageBox.information(self, "Success", f"Loaded similarity data from {os.path.basename(file_path)}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to load CSV file: {str(e)}")
-    
+
     def load_heatmap_image(self):
         """Load heatmap image file"""
         file_path, _ = QFileDialog.getOpenFileName(
-            self, 
-            "Load Heatmap Image", 
-            "", 
+            self,
+            "Load Heatmap Image",
+            "",
             "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
         )
-        
+
         if file_path:
             try:
                 pixmap = QPixmap(file_path)
@@ -642,7 +642,7 @@ class ResultsTab(QWidget):
                     QMessageBox.warning(self, "Warning", "Could not load image file")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to load image: {str(e)}")
-    
+
     def auto_load_results(self):
         """Automatically load results from the results folder"""
         results_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results")
@@ -691,7 +691,7 @@ class ResultsTab(QWidget):
             QMessageBox.information(self, "Success", f"Auto-loaded:\n" + "\n".join(f"  - {f}" for f in loaded_files))
         else:
             QMessageBox.information(self, "Info", "No results files found in the results directory")
-    
+
     def display_similarity_table(self):
         """Display similarity data in the table widget"""
         if self.similarity_data is None:
@@ -804,16 +804,16 @@ class ResultsTab(QWidget):
         self.update_object_summary()
         self.update_top_matches()
         self.apply_filter()
-    
+
     def display_heatmap(self):
         """Display the heatmap image"""
         if self.heatmap_image is None:
             return
-        
+
         # Scale image to fit while maintaining aspect ratio
         scaled_pixmap = self.heatmap_image.scaled(
-            self.heatmap_label.size(), 
-            Qt.AspectRatioMode.KeepAspectRatio, 
+            self.heatmap_label.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
         self.heatmap_label.setPixmap(scaled_pixmap)
@@ -825,7 +825,7 @@ class ResultsTab(QWidget):
                 padding: 5px;
             }
         """)
-    
+
     def update_statistics(self):
         """Update the statistics section with data from similarity matrix"""
         if self.similarity_data is None:
@@ -905,7 +905,7 @@ class ResultsTab(QWidget):
                 line-height: 1.4;
             }
         """)
-    
+
     def extract_object_groups(self):
         """Extract object groupings from image filenames"""
         if self.similarity_data is None:

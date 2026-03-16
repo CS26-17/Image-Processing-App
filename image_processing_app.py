@@ -1,4 +1,8 @@
 import sys
+# Import pandas/numpy before PySide6 to prevent shibokensupport from
+# intercepting the six.moves import chain (known PySide6 + six conflict).
+import pandas
+import numpy
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout,
     QWidget, QLabel, QTabWidget
