@@ -1,18 +1,3 @@
-# 3. Running on Docker Container:
-
-# 	Open Docker Desktop and make sure your Docker engine is running
-# 	In the terminal cd into the Image-Processing-App and run:
-# 		docker build --no-cache -t image-analysis-cnn Docker/
-
-# 	You can test the container in the terminal by running: 
-# 	docker run --rm -v "C:\Image-Processing-App\testing_images\grey_images:/data" 
-# 	-v "C:\Image-Processing-App\results:/app/output" image-analysis-cnn --model vgg16 
-# 	--folder /data --name test_run
-
-# 	Once that is working you can use the GUI to run the analysis
-
-# 	Result files currently go to the image directory that was chosen for analysis
-
 """
 Analysis Setup Tab - Configure analysis parameters and settings
 """
@@ -41,8 +26,6 @@ class AnalysisSetupTab(QWidget):
     def get_project_root(self):
         """
         Returns the project root directory.
-        This file lives at <project_root>/tabs/analysis_setup_tab.py,
-        so the root is one level above __file__.
         """
         return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
  
@@ -72,8 +55,6 @@ class AnalysisSetupTab(QWidget):
     def get_script_path(self):
         """
         Returns the absolute path to run_models.py (project root).
-        This file lives at <project_root>/tabs/analysis_setup_tab.py,
-        so run_models.py is one level up.
         """
         project_root = self.get_project_root()
         script = os.path.join(project_root, "run_models.py")
