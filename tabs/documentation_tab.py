@@ -3,6 +3,7 @@ Documentation Tab - Application documentation and user guide
 """
 
 import os
+import shutil
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QTextBrowser, QPushButton, QFrame, QScrollArea,
                              QSplitter, QListWidget, QListWidgetItem, QFileDialog,
@@ -217,11 +218,74 @@ class DocumentationTab(QWidget):
             self.content_browser.setHtml(self.docs_content[row])
     
     def download_user_manual(self):
-        """Handle PDF manual download"""
-        # For now, show a message. You can replace this with actual PDF generation
-        QMessageBox.information(self, "Download", 
-                               "User manual PDF download functionality will be implemented soon.\n\n"
-                               "For now, please refer to the online documentation above.")
+        """Download the user manual from the project root."""
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+        # Prefer PDF if present, then Word docs.
+        candidate_names = [
+            "Image-Processing-App User Manual.pdf",
+            "Image-Processing-App User Manual 26.docx",
+        ]
+        manual_path = None
+
+        for name in candidate_names:
+            path = os.path.join(project_root, name)
+            if os.path.isfile(path):
+                manual_path = path
+                break
+
+        # Fallback: find any file in root that looks like a user manual.
+        if manual_path is None:
+            allowed_ext = (".pdf", ".docx", ".doc")
+            for entry in os.listdir(project_root):
+                lower_entry = entry.lower()
+                if "user manual" in lower_entry and lower_entry.endswith(allowed_ext):
+                    path = os.path.join(project_root, entry)
+                    if os.path.isfile(path):
+                        manual_path = path
+                        break
+
+        if manual_path is None:
+            QMessageBox.warning(
+                self,
+                "Manual Not Found",
+                "Could not find a user manual file in the project root folder.",
+            )
+            return
+
+        default_name = os.path.basename(manual_path)
+        _, ext = os.path.splitext(default_name)
+        ext = ext.lower()
+        if ext == ".pdf":
+            file_filter = "PDF Files (*.pdf);;All Files (*)"
+        elif ext in (".docx", ".doc"):
+            file_filter = "Word Documents (*.docx *.doc);;All Files (*)"
+        else:
+            file_filter = "All Files (*)"
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save User Manual",
+            default_name,
+            file_filter,
+        )
+
+        if not save_path:
+            return
+
+        try:
+            shutil.copy2(manual_path, save_path)
+            QMessageBox.information(
+                self,
+                "Download Complete",
+                f"User manual saved to:\n{save_path}",
+            )
+        except OSError as exc:
+            QMessageBox.critical(
+                self,
+                "Download Failed",
+                f"Failed to save user manual:\n{exc}",
+            )
     
     # Documentation content methods
     def get_getting_started_content(self):
