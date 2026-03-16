@@ -94,6 +94,13 @@ class ImageProcessingApp(QMainWindow):
         self.analysis_setup_tab = AnalysisSetupTab()
         self.tab_widget.addTab(self.analysis_setup_tab, "⚙️ Analysis Setup")
 
+        # When analysis finishes, load results and switch to Results tab
+        self.analysis_setup_tab.analysis_complete.connect(self._on_analysis_complete)
+
+    def _on_analysis_complete(self, output_dir):
+        self.results_tab.load_from_directory(output_dir)
+        self.tab_widget.setCurrentWidget(self.results_tab)
+
 
 def main() -> None:
     """Entry point for the application."""

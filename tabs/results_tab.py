@@ -643,6 +643,41 @@ class ResultsTab(QWidget):
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to load image: {str(e)}")
 
+    def load_from_directory(self, results_dir):
+        """Load results directly from a given directory path (called after analysis completes)."""
+        if not os.path.exists(results_dir):
+            return
+
+        all_files = os.listdir(results_dir)
+
+        csv_files = [f for f in all_files if f.endswith('.csv')]
+        similarity_csvs = [f for f in csv_files if 'similarity' in f.lower()]
+        target_csv = similarity_csvs[0] if similarity_csvs else (csv_files[0] if csv_files else None)
+
+        if target_csv:
+            try:
+                self.similarity_data = pd.read_csv(os.path.join(results_dir, target_csv), index_col=0)
+                self.display_similarity_table()
+            except Exception:
+                pass
+
+        image_extensions = ['.png', '.jpg', '.jpeg', '.bmp', '.gif']
+        image_files = [f for f in all_files if any(f.lower().endswith(ext) for ext in image_extensions)]
+        heatmap_images = [f for f in image_files if 'heatmap' in f.lower()]
+        target_image = heatmap_images[0] if heatmap_images else (image_files[0] if image_files else None)
+
+        if target_image:
+            try:
+                pixmap = QPixmap(os.path.join(results_dir, target_image))
+                if not pixmap.isNull():
+                    self.heatmap_image = pixmap
+                    self.display_heatmap()
+            except Exception:
+                pass
+
+        if self.similarity_data is not None:
+            self.update_statistics()
+
     def auto_load_results(self):
         """Automatically load results from the results folder"""
         results_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "results")
