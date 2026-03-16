@@ -1,3 +1,18 @@
+# 3. Running on Docker Container:
+
+# 	Open Docker Desktop and make sure your Docker engine is running
+# 	In the terminal cd into the Image-Processing-App and run:
+# 		docker build --no-cache -t image-analysis-cnn Docker/
+
+# 	You can test the container in the terminal by running: 
+# 	docker run --rm -v "C:\Image-Processing-App\testing_images\grey_images:/data" 
+# 	-v "C:\Image-Processing-App\results:/app/output" image-analysis-cnn --model vgg16 
+# 	--folder /data --name test_run
+
+# 	Once that is working you can use the GUI to run the analysis
+
+# 	Result files currently go to the image directory that was chosen for analysis
+
 """
 Analysis Setup Tab - Configure analysis parameters and settings
 """
@@ -249,7 +264,10 @@ class AnalysisSetupTab(QWidget):
     def on_apply(self):
         # Validate inputs
         if not self.selected_folder:
-            self.status_label.setText("Please select an image folder")
+            self.status_label.setText("Please select and image folder")
+            return
+        if not (self.vg_button.isChecked() or self.res_button.isChecked()):
+            self.status_label.setText("Please select model")
             return
         if not (self.vg_button.isChecked() or self.res_button.isChecked()):
             self.status_label.setText("Please select a model")
