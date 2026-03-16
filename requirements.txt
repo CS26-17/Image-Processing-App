@@ -1,3 +1,10 @@
 PySide6>=6.5.0
-Pillow>=10.0.0
-numpy>=1.24.0
+torch==2.3.1
+torchvision==0.18.1
+numpy<2.0
+Pillow
+scikit-learn
+matplotlib
+seaborn
+pandas
+tqdm==4.66.4
