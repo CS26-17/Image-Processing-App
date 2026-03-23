@@ -64,6 +64,7 @@ class ResultsTab(QWidget):
         super().__init__(parent)
         self.similarity_data = None
         self.heatmap_image = None
+        self.heatmap_image_path = None
         self.object_groups = {}  # Store object groupings
         self.current_filter_obj1 = None
         self.current_filter_obj2 = None
@@ -99,10 +100,7 @@ class ResultsTab(QWidget):
         btn_load_heatmap = QPushButton("Load Heatmap Image")
         btn_load_heatmap.clicked.connect(self.load_heatmap_image)
 
-        btn_auto_load = QPushButton("Auto-Load from Results Folder")
-        btn_auto_load.clicked.connect(self.auto_load_results)
-
-        for btn in [btn_load_csv, btn_load_heatmap, btn_auto_load]:
+        for btn in [btn_load_csv, btn_load_heatmap]:
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #3b82f6;
@@ -508,16 +506,14 @@ class ResultsTab(QWidget):
         # 5. Export Section
         self.export_section = SectionWidget("Export Options")
 
-        # Export buttons
+        # Download buttons
         button_layout = QHBoxLayout()
 
-        btn_export_png = QPushButton("Export as PNG")
-        btn_export_jpg = QPushButton("Export as JPG")
-        btn_export_pdf = QPushButton("Export as PDF")
-        btn_export_csv = QPushButton("Export Data (CSV)")
+        btn_download_csv = QPushButton("Download CSV")
+        btn_download_heatmap = QPushButton("Download Heatmap PNG")
 
         # Style buttons
-        for btn in [btn_export_png, btn_export_jpg, btn_export_pdf, btn_export_csv]:
+        for btn in [btn_download_csv, btn_download_heatmap]:
             btn.setStyleSheet("""
                 QPushButton {
                     background-color: #e5e7eb;
@@ -534,6 +530,10 @@ class ResultsTab(QWidget):
             """)
             button_layout.addWidget(btn)
 
+        btn_download_csv.clicked.connect(self.download_csv)
+        btn_download_heatmap.clicked.connect(self.download_heatmap_png)
+
+        button_layout.addStretch()
         self.export_section.content_layout.addLayout(button_layout)
         scroll_layout.addWidget(self.export_section)
 
@@ -636,6 +636,7 @@ class ResultsTab(QWidget):
                 pixmap = QPixmap(file_path)
                 if not pixmap.isNull():
                     self.heatmap_image = pixmap
+                    self.heatmap_image_path = file_path
                     self.display_heatmap()
                     QMessageBox.information(self, "Success", f"Loaded heatmap from {os.path.basename(file_path)}")
                 else:
@@ -668,12 +669,22 @@ class ResultsTab(QWidget):
 
         if target_image:
             try:
-                pixmap = QPixmap(os.path.join(results_dir, target_image))
+                img_full_path = os.path.join(results_dir, target_image)
+                pixmap = QPixmap(img_full_path)
                 if not pixmap.isNull():
                     self.heatmap_image = pixmap
+                    self.heatmap_image_path = img_full_path
                     self.display_heatmap()
             except Exception:
                 pass
+
+        # Auto-set image folder to the parent of results_dir (where source images live)
+        source_dir = os.path.dirname(results_dir)
+        if os.path.isdir(source_dir):
+            self.image_folder = source_dir
+            if hasattr(self, 'comp_folder_label'):
+                self.comp_folder_label.setText(f"Image folder: {source_dir}")
+                self.comp_folder_label.setStyleSheet("color: #374151; font-size: 11px;")
 
         if self.similarity_data is not None:
             self.update_statistics()
@@ -716,6 +727,7 @@ class ResultsTab(QWidget):
                 pixmap = QPixmap(img_path)
                 if not pixmap.isNull():
                     self.heatmap_image = pixmap
+                    self.heatmap_image_path = img_path
                     self.display_heatmap()
                     loaded_files.append(f"{target_image} (heatmap)")
             except Exception as e:
@@ -727,25 +739,54 @@ class ResultsTab(QWidget):
         else:
             QMessageBox.information(self, "Info", "No results files found in the results directory")
 
+    def download_csv(self):
+        """Save the currently loaded similarity CSV to a user-selected location"""
+        if self.similarity_data is None:
+            QMessageBox.warning(self, "No Data", "No CSV data is currently loaded.")
+            return
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save CSV",
+            "similarity.csv",
+            "CSV Files (*.csv);;All Files (*)"
+        )
+
+        if save_path:
+            try:
+                self.similarity_data.to_csv(save_path)
+                QMessageBox.information(self, "Saved", f"CSV saved to {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save CSV: {str(e)}")
+
+    def download_heatmap_png(self):
+        """Save the currently loaded heatmap image to a user-selected location"""
+        if self.heatmap_image is None:
+            QMessageBox.warning(self, "No Heatmap", "No heatmap image is currently loaded.")
+            return
+
+        save_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Heatmap PNG",
+            "heatmap.png",
+            "PNG Files (*.png);;All Files (*)"
+        )
+
+        if save_path:
+            try:
+                if self.heatmap_image_path and os.path.isfile(self.heatmap_image_path):
+                    import shutil
+                    shutil.copy2(self.heatmap_image_path, save_path)
+                else:
+                    self.heatmap_image.save(save_path, "PNG")
+                QMessageBox.information(self, "Saved", f"Heatmap saved to {save_path}")
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to save heatmap: {str(e)}")
+
     def display_similarity_table(self):
         """Display similarity data in the table widget"""
         if self.similarity_data is None:
             return
-
-        # Auto-detect image folder if not already set
-        if self.image_folder is None:
-            project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            candidates = [
-                os.path.join(project_root, "testing_images", "grey_images"),
-                os.path.join(project_root, "testing_images", "Images"),
-                os.path.join(project_root, "testing_images"),
-            ]
-            for candidate in candidates:
-                if os.path.isdir(candidate):
-                    self.image_folder = candidate
-                    self.comp_folder_label.setText(f"Image folder: {candidate}")
-                    self.comp_folder_label.setStyleSheet("color: #374151; font-size: 11px;")
-                    break
 
         # Update matrix info label
         num_images = len(self.similarity_data)
