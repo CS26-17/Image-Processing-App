@@ -4,7 +4,7 @@ Analysis Setup Tab - Configure analysis parameters and settings
  
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QPushButton, QLineEdit, QButtonGroup, QFileDialog)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtCore import QProcess, QProcessEnvironment
 from PySide6.QtWidgets import QProgressBar
 import os
@@ -14,7 +14,9 @@ class AnalysisSetupTab(QWidget):
     """
     Analysis Setup tab widget for configuring analysis parameters
     """
-    
+
+    analysis_complete = Signal(str)  # emits output_dir path on success
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.selected_folder = ""
@@ -260,7 +262,8 @@ class AnalysisSetupTab(QWidget):
             return
  
         # Results go into a "results" subfolder inside the chosen image folder
-        output_dir = os.path.join(self.selected_folder, "results")
+        self.output_dir = os.path.join(self.selected_folder, "results")
+        output_dir = self.output_dir
         os.makedirs(output_dir, exist_ok=True)
  
         self.status_label.setText("Running analysis...")
@@ -320,6 +323,7 @@ class AnalysisSetupTab(QWidget):
         if exit_code == 0:
             self.progress_bar.setValue(100)
             self.status_label.setText("Analysis complete! Results saved to folder.")
+            self.analysis_complete.emit(self.output_dir)
         else:
             self.progress_bar.setVisible(False)
             # Show the last meaningful stderr line (filter out tqdm noise)

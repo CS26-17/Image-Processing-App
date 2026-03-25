@@ -1,4 +1,8 @@
 import sys
+# Import pandas/numpy before PySide6 to prevent shibokensupport from
+# intercepting the six.moves import chain (known PySide6 + six conflict).
+import pandas
+import numpy
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout,
     QWidget, QLabel, QTabWidget
@@ -89,6 +93,13 @@ class ImageProcessingApp(QMainWindow):
         # Analysis Setup Tab (simple placeholder, as before)
         self.analysis_setup_tab = AnalysisSetupTab()
         self.tab_widget.addTab(self.analysis_setup_tab, "⚙️ Analysis Setup")
+
+        # When analysis finishes, load results and switch to Results tab
+        self.analysis_setup_tab.analysis_complete.connect(self._on_analysis_complete)
+
+    def _on_analysis_complete(self, output_dir):
+        self.results_tab.load_from_directory(output_dir)
+        self.tab_widget.setCurrentWidget(self.results_tab)
 
 
 def main() -> None:
