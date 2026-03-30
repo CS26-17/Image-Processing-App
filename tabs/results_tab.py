@@ -120,25 +120,7 @@ class ResultsTab(QWidget):
         file_section.content_layout.addLayout(file_layout)
         scroll_layout.addWidget(file_section)
 
-        # 1. Image Display Section
-        self.image_section = SectionWidget("Image Preview")
-        self.image_label = QLabel("No image loaded")
-        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.image_label.setMinimumHeight(200)
-        self.image_label.setStyleSheet("""
-            QLabel {
-                background-color: #ffffff;
-                border: 2px dashed #d1d5db;
-                border-radius: 8px;
-                color: #9ca3af;
-                font-style: italic;
-                padding: 20px;
-            }
-        """)
-        self.image_section.content_layout.addWidget(self.image_label)
-        scroll_layout.addWidget(self.image_section)
-
-        # 2. Image Statistics Section
+        # 1. Image Statistics Section
         self.stats_section = SectionWidget("Image Statistics")
         self.stats_placeholder = QLabel("Image statistics will be displayed here")
         self.stats_placeholder.setStyleSheet("color: #6b7280; font-style: italic;")
@@ -191,11 +173,6 @@ class ResultsTab(QWidget):
                 border: 1px solid #d1d5db;
                 border-radius: 4px;
                 padding: 4px 8px;
-            }
-            QTableWidget {
-                color: #1f2937;
-                background-color: white;
-                gridline-color: #e5e7eb;
             }
         """)
 
@@ -806,25 +783,45 @@ class ResultsTab(QWidget):
             }
         """)
 
-        # Hide Qt's separate vertical header — row labels become the first data column
+        # Hide both Qt headers — row and column labels live in data cells instead
         self.similarity_table.verticalHeader().hide()
+        self.similarity_table.horizontalHeader().hide()
 
         n_rows = len(self.similarity_data)
         n_cols = len(self.similarity_data.columns)
 
-        self.similarity_table.setRowCount(n_rows)
-        self.similarity_table.setColumnCount(n_cols + 1)  # +1 for inline row-label column
+        # +1 row for the column-label header row (row 0)
+        self.similarity_table.setRowCount(n_rows + 1)
+        self.similarity_table.setColumnCount(n_cols + 1)
 
-        # Horizontal headers: blank for the label column, then data column names
         col_labels = [c.replace('.jpg', '').replace('.png', '') for c in self.similarity_data.columns]
-        self.similarity_table.setHorizontalHeaderLabels([""] + col_labels)
+
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(9)
+
+        # Row 0: column label cells styled as a header
+        corner = QTableWidgetItem("")
+        corner.setBackground(QBrush(QColor(44, 62, 80)))
+        corner.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        self.similarity_table.setItem(0, 0, corner)
+        for j, label_text in enumerate(col_labels):
+            ch = QTableWidgetItem(label_text)
+            ch.setBackground(QBrush(QColor(44, 62, 80)))
+            ch.setForeground(QBrush(QColor(255, 255, 255)))
+            ch.setFont(header_font)
+            ch.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            ch.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.similarity_table.setItem(0, j + 1, ch)
+        self.similarity_table.setRowHeight(0, 28)
 
         label_font = QFont()
         label_font.setBold(True)
         label_font.setPointSize(9)
 
         for i, row_name in enumerate(self.similarity_data.index):
-            # Column 0: inline row label styled like a header cell
+            data_row = i + 1  # row 0 is the column-label row
+            # Column 0: inline row label
             display_name = row_name.replace('.jpg', '').replace('.png', '')
             label_item = QTableWidgetItem(display_name)
             label_item.setBackground(QBrush(QColor(232, 237, 242)))
@@ -832,7 +829,7 @@ class ResultsTab(QWidget):
             label_item.setFont(label_font)
             label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
             label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.similarity_table.setItem(i, 0, label_item)
+            self.similarity_table.setItem(data_row, 0, label_item)
 
             # Columns 1..N: similarity values
             for j, col_name in enumerate(self.similarity_data.columns):
@@ -851,24 +848,14 @@ class ResultsTab(QWidget):
 
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.similarity_table.setItem(i, j + 1, item)
+                self.similarity_table.setItem(data_row, j + 1, item)
 
-        # Label column: auto-size to fit content; data columns: fixed interactive width
+        # Column sizing
         header = self.similarity_table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         header.setDefaultSectionSize(72)
         header.setMinimumSectionSize(60)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        header.setStyleSheet("""
-            QHeaderView::section {
-                background-color: #f8f9fa;
-                color: #2c3e50;
-                padding: 4px 4px;
-                border: 1px solid #e0e0e0;
-                font-weight: bold;
-                font-size: 10px;
-            }
-        """)
 
         # Make table read-only
         self.similarity_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
@@ -1036,21 +1023,40 @@ class ResultsTab(QWidget):
     def display_filtered_table(self, data):
         """Display filtered data in the filtered table"""
         self.filtered_table.verticalHeader().hide()
+        self.filtered_table.horizontalHeader().hide()
 
         n_rows = len(data)
         n_cols = len(data.columns)
 
-        self.filtered_table.setRowCount(n_rows)
+        self.filtered_table.setRowCount(n_rows + 1)  # +1 for column-label row
         self.filtered_table.setColumnCount(n_cols + 1)
 
         col_labels = [c.replace('.jpg', '').replace('.png', '') for c in data.columns]
-        self.filtered_table.setHorizontalHeaderLabels([""] + col_labels)
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(9)
+
+        # Row 0: column label cells
+        corner = QTableWidgetItem("")
+        corner.setBackground(QBrush(QColor(44, 62, 80)))
+        corner.setFlags(Qt.ItemFlag.ItemIsEnabled)
+        self.filtered_table.setItem(0, 0, corner)
+        for j, label_text in enumerate(col_labels):
+            ch = QTableWidgetItem(label_text)
+            ch.setBackground(QBrush(QColor(44, 62, 80)))
+            ch.setForeground(QBrush(QColor(255, 255, 255)))
+            ch.setFont(header_font)
+            ch.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            ch.setFlags(Qt.ItemFlag.ItemIsEnabled)
+            self.filtered_table.setItem(0, j + 1, ch)
+        self.filtered_table.setRowHeight(0, 28)
 
         label_font = QFont()
         label_font.setBold(True)
         label_font.setPointSize(9)
 
         for i, row_name in enumerate(data.index):
+            data_row = i + 1
             display_name = row_name.replace('.jpg', '').replace('.png', '')
             label_item = QTableWidgetItem(display_name)
             label_item.setBackground(QBrush(QColor(232, 237, 242)))
@@ -1058,7 +1064,7 @@ class ResultsTab(QWidget):
             label_item.setFont(label_font)
             label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
             label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.filtered_table.setItem(i, 0, label_item)
+            self.filtered_table.setItem(data_row, 0, label_item)
 
             for j, col_name in enumerate(data.columns):
                 value = data.iloc[i, j]
@@ -1076,24 +1082,13 @@ class ResultsTab(QWidget):
 
                 item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
                 item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.filtered_table.setItem(i, j + 1, item)
+                self.filtered_table.setItem(data_row, j + 1, item)
 
         fh = self.filtered_table.horizontalHeader()
         fh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         fh.setDefaultSectionSize(72)
         fh.setMinimumSectionSize(60)
         fh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        fh.setStyleSheet("""
-            QHeaderView::section {
-                background-color: #f8f9fa;
-                color: #2c3e50;
-                padding: 4px 4px;
-                border: 1px solid #e0e0e0;
-                font-weight: bold;
-                font-size: 10px;
-            }
-        """)
-
         self.filtered_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
     def update_filtered_stats(self, data, obj1, obj2):
@@ -1131,12 +1126,22 @@ class ResultsTab(QWidget):
 
         # Hide Qt's vertical header — row labels become the first data column
         self.summary_table.verticalHeader().hide()
+        sh_header = self.summary_table.horizontalHeader()
+        sh_header.setVisible(True)
+        sh_header.setMinimumHeight(26)
 
         self.summary_table.setRowCount(len(objects))
         self.summary_table.setColumnCount(len(objects) + 4)  # +1 label col, +3 intra-stats
 
         headers = [""] + objects + ["Intra-Mean", "Intra-Min", "Intra-Max"]
-        self.summary_table.setHorizontalHeaderLabels(headers)
+        header_font = QFont()
+        header_font.setBold(True)
+        header_font.setPointSize(9)
+        for j, text in enumerate(headers):
+            h_item = QTableWidgetItem(text)
+            h_item.setForeground(QBrush(QColor(44, 62, 80)))
+            h_item.setFont(header_font)
+            self.summary_table.setHorizontalHeaderItem(j, h_item)
 
         label_font = QFont()
         label_font.setBold(True)
@@ -1194,16 +1199,6 @@ class ResultsTab(QWidget):
 
         sh = self.summary_table.horizontalHeader()
         sh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        sh.setStyleSheet("""
-            QHeaderView::section {
-                background-color: #f8f9fa;
-                color: #2c3e50;
-                padding: 5px 6px;
-                border: 1px solid #e0e0e0;
-                font-weight: bold;
-                font-size: 10px;
-            }
-        """)
         self.summary_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
     def update_top_matches(self):
@@ -1238,9 +1233,18 @@ class ResultsTab(QWidget):
             df_pairs = cross_obj.nlargest(n, 'Similarity')
 
         # Display in table
+        mh_header = self.matches_table.horizontalHeader()
+        mh_header.setVisible(True)
+        mh_header.setMinimumHeight(26)
         self.matches_table.setRowCount(len(df_pairs))
         self.matches_table.setColumnCount(4)
-        self.matches_table.setHorizontalHeaderLabels(['Image 1', 'Image 2', 'Similarity', 'Same Object'])
+        header_font = QFont()
+        header_font.setBold(True)
+        for j, text in enumerate(['Image 1', 'Image 2', 'Similarity', 'Same Object']):
+            h_item = QTableWidgetItem(text)
+            h_item.setForeground(QBrush(QColor(44, 62, 80)))
+            h_item.setFont(header_font)
+            self.matches_table.setHorizontalHeaderItem(j, h_item)
 
         def strip_ext(name):
             return name.replace('.jpg', '').replace('.png', '')
@@ -1279,17 +1283,6 @@ class ResultsTab(QWidget):
 
         self.matches_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.matches_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-
-        # Style headers for matches table
-        self.matches_table.horizontalHeader().setStyleSheet("""
-            QHeaderView::section {
-                background-color: #f8f9fa;
-                color: #2c3e50;
-                padding: 5px;
-                border: 1px solid #e0e0e0;
-                font-weight: bold;
-            }
-        """)
 
     def _same_object(self, img1, img2):
         """Check if two images are from the same object"""
@@ -1341,18 +1334,17 @@ class ResultsTab(QWidget):
     def on_matrix_cell_clicked(self, row, col):
         """Handle a click in the Full Matrix or Compare Objects table.
 
-        Column 0 holds the row label; clicking any data cell (col > 0) selects
-        that row's image as Image 1 and that column's image as Image 2.
-        Clicking the label column (col == 0) is ignored.
+        Row 0 is the column-label header row; column 0 holds the row label.
+        Clicking either is ignored; only data cells (row > 0, col > 0) select a pair.
         """
-        if self.similarity_data is None or col == 0:
+        if self.similarity_data is None or row == 0 or col == 0:
             return
 
         # Determine which table sent the signal
         table = self.sender()
 
         row_label_item = table.item(row, 0)
-        col_header_item = table.horizontalHeaderItem(col)
+        col_header_item = table.item(0, col)  # column name lives in the header row
         if row_label_item is None or col_header_item is None:
             return
 
