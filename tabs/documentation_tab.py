@@ -3,12 +3,13 @@ Documentation Tab - Application documentation and user guide
 """
 
 import os
+import re
 import shutil
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QTextBrowser, QPushButton, QFrame, QSplitter,
+                             QTextBrowser, QTextEdit, QPushButton, QFrame, QSplitter,
                              QListWidget, QFileDialog, QMessageBox, QLineEdit)
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QTextCharFormat, QColor, QTextCursor
 
 
 class DocumentationTab(QWidget):
@@ -18,6 +19,9 @@ class DocumentationTab(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.docs_content = {}
+        self.section_targets = []
+        self.highlight_terms = []
         self.setup_ui()
         self.load_documentation_content()
     
@@ -60,8 +64,11 @@ class DocumentationTab(QWidget):
         self.nav_subtitle.setStyleSheet("color: #486581; font-size: 12px; padding: 0 8px 8px 8px;")
         nav_layout.addWidget(self.nav_subtitle)
 
+        search_row = QHBoxLayout()
+        search_row.setSpacing(8)
+
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search sections...")
+        self.search_input.setPlaceholderText("Search sections or topics...")
         self.search_input.setStyleSheet("""
             QLineEdit {
                 background-color: white;
@@ -76,7 +83,28 @@ class DocumentationTab(QWidget):
             }
         """)
         self.search_input.textChanged.connect(self.filter_navigation)
-        nav_layout.addWidget(self.search_input)
+        self.search_input.returnPressed.connect(self.jump_to_search_result)
+        search_row.addWidget(self.search_input, stretch=1)
+
+        self.clear_search_button = QPushButton("Clear")
+        self.clear_search_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.clear_search_button.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                color: #486581;
+                border: 1px solid #bcccdc;
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #f0f4f8;
+            }
+        """)
+        self.clear_search_button.clicked.connect(self.clear_search)
+        search_row.addWidget(self.clear_search_button)
+        nav_layout.addLayout(search_row)
         
         # Navigation list
         self.nav_list = QListWidget()
@@ -317,6 +345,7 @@ class DocumentationTab(QWidget):
             6: self.get_keyboard_shortcuts_content(),
             7: self.get_api_reference_content()
         }
+        self.section_targets = self.build_section_targets()
         
         # Show first section by default
         self.nav_list.setCurrentRow(0)
@@ -325,40 +354,277 @@ class DocumentationTab(QWidget):
     def on_nav_changed(self, row):
         """Handle navigation item selection"""
         if row >= 0 and row < len(self.docs_content):
-            self.content_browser.setHtml(self.docs_content[row])
-            self.section_title_label.setText(self.nav_items[row])
-            self.section_path_label.setText(f"Documentation > {self.nav_items[row]}")
-            self.prev_button.setEnabled(self._has_visible_before(row))
-            self.next_button.setEnabled(self._has_visible_after(row))
+            self.show_section(row)
 
     def filter_navigation(self, text):
         """Filter visible sections based on search text."""
         query = text.strip().lower()
+        self.highlight_terms = self.build_highlight_terms(query)
+        best_match = self.find_best_section_match(query) if query else None
+        visible_rows = set()
+
+        if query:
+            visible_rows.update(
+                target["row"] for target in self.section_targets
+                if self.matches_query(target, query)
+            )
+            if not visible_rows and best_match is not None:
+                visible_rows.add(best_match["row"])
+        else:
+            visible_rows.update(range(self.nav_list.count()))
+
         first_visible = None
 
         for idx in range(self.nav_list.count()):
             item = self.nav_list.item(idx)
-            is_match = query in item.text().lower()
+            is_match = idx in visible_rows
             item.setHidden(not is_match)
+            self.update_nav_item_style(idx, item, query, is_match)
             if is_match and first_visible is None:
                 first_visible = idx
+
+        if best_match is not None:
+            self.show_search_result(best_match)
+            return
 
         current_item = self.nav_list.currentItem()
         if current_item and current_item.isHidden():
             if first_visible is not None:
                 self.nav_list.setCurrentRow(first_visible)
-            else:
-                self.section_title_label.setText("No section found")
-                self.section_path_label.setText("Documentation")
-                self.content_browser.setHtml(
-                    "<h2>No matching section</h2><p>Try a different search keyword.</p>"
-                )
-                self.prev_button.setEnabled(False)
-                self.next_button.setEnabled(False)
-        elif self.nav_list.currentRow() >= 0:
+                return
+            self.section_title_label.setText("No section found")
+            self.section_path_label.setText("Documentation")
+            self.content_browser.setHtml(
+                "<h2>No matching section</h2><p>Try a different search keyword.</p>"
+            )
+            self.prev_button.setEnabled(False)
+            self.next_button.setEnabled(False)
+            return
+
+        if self.nav_list.currentRow() >= 0:
             row = self.nav_list.currentRow()
             self.prev_button.setEnabled(self._has_visible_before(row))
             self.next_button.setEnabled(self._has_visible_after(row))
+
+    def jump_to_search_result(self):
+        """Jump to the best matching section or subsection."""
+        query = self.search_input.text().strip().lower()
+        if not query:
+            return
+
+        best_match = self.find_best_section_match(query)
+        if best_match is not None:
+            self.show_search_result(best_match)
+
+    def show_section(self, row, anchor=None, subsection_title=None):
+        """Display a documentation section and optionally jump to a subsection."""
+        if row < 0 or row >= len(self.docs_content):
+            return
+
+        self.content_browser.setHtml(self.docs_content[row])
+        self.section_title_label.setText(self.nav_items[row])
+
+        path = f"Documentation > {self.nav_items[row]}"
+        if subsection_title:
+            path = f"{path} > {subsection_title}"
+        self.section_path_label.setText(path)
+
+        if anchor:
+            self.content_browser.scrollToAnchor(anchor)
+        else:
+            self.scroll_to_top()
+
+        self.apply_content_highlighting()
+
+        self.prev_button.setEnabled(self._has_visible_before(row))
+        self.next_button.setEnabled(self._has_visible_after(row))
+
+    def show_search_result(self, match):
+        """Open a section and scroll to the best matching subsection."""
+        row = match["row"]
+        item = self.nav_list.item(row)
+        if item is not None and item.isHidden():
+            item.setHidden(False)
+        self.nav_list.setCurrentRow(row)
+        self.show_section(
+            row,
+            anchor=match.get("anchor"),
+            subsection_title=match.get("title"),
+        )
+
+    def build_section_targets(self):
+        """Create searchable section and subsection targets."""
+        return [
+            self.make_target(0, "Getting Started", keywords=["start", "introduction", "overview", "welcome"]),
+            self.make_target(0, "System Requirements", "system-requirements", ["requirements", "ram", "storage", "python", "os"]),
+            self.make_target(0, "Installation Guide", "installation-guide", ["install", "installation", "setup"]),
+            self.make_target(0, "Basic Workflow", "basic-workflow", ["workflow", "steps", "process"]),
+            self.make_target(0, "Need Help", "need-help", ["help", "support"]),
+            self.make_target(1, "Image Upload Guide", keywords=["upload", "import", "images"]),
+            self.make_target(1, "Supported Formats", "supported-formats", ["formats", "jpeg", "jpg", "png", "gif", "bmp"]),
+            self.make_target(1, "Drag & Drop", "drag-drop", ["drag", "drop", "drag and drop"]),
+            self.make_target(1, "File Browser", "file-browser", ["browse", "file browser", "select files"]),
+            self.make_target(1, "Batch Upload", "batch-upload", ["batch", "multiple files", "folder upload"]),
+            self.make_target(1, "Best Practices", "upload-best-practices", ["best practices", "naming", "file size", "image size"]),
+            self.make_target(1, "Troubleshooting Upload Issues", "upload-troubleshooting", ["upload fails", "format not supported"]),
+            self.make_target(2, "Image Modification", keywords=["modification", "edit", "adjustments"]),
+            self.make_target(2, "Basic Adjustments", "basic-adjustments", ["basic adjustment", "adjust"]),
+            self.make_target(2, "Brightness & Contrast", "brightness-contrast", ["brightness", "contrast", "saturation"]),
+            self.make_target(2, "Crop & Resize", "crop-resize", ["crop", "resize", "dimensions"]),
+            self.make_target(2, "Research-Specific Modifications", "research-specific-modifications", ["research modifications"]),
+            self.make_target(2, "Visual Complexity Manipulation", "visual-complexity-manipulation", ["visual complexity", "complexity manipulation", "detail density"]),
+            self.make_target(2, "Batch Processing", "batch-processing", ["batch processing", "apply to all"]),
+            self.make_target(2, "Experimental Design Tips", "experimental-design-tips", ["design tips", "reproducibility"]),
+            self.make_target(3, "Image Analysis", keywords=["analysis", "image analysis", "cnn"]),
+            self.make_target(3, "CNN-Based Similarity Analysis", "cnn-similarity-analysis", ["cnn", "similarity", "pairwise similarity"]),
+            self.make_target(3, "Similarity Scores", "similarity-scores", ["scores", "score", "similarity scores"]),
+            self.make_target(3, "Analysis Configuration", "analysis-configuration", ["configuration", "model selection", "thresholds"]),
+            self.make_target(3, "Complexity Metrics", "complexity-metrics", ["complexity", "complexity metric", "complexity metrics", "complex matrix", "complexity assessment", "visual clutter", "color distribution", "edge density", "symmetry", "复杂矩阵", "复杂度"]),
+            self.make_target(3, "Interpretation Guidelines", "interpretation-guidelines", ["interpretation", "guidelines", "research context"]),
+            self.make_target(4, "Results Interpretation", keywords=["results", "result interpretation", "matrix"]),
+            self.make_target(4, "Similarity Matrix", "similarity-matrix", ["matrix", "similarity matrix"]),
+            self.make_target(4, "Reading the Matrix", "reading-the-matrix", ["read matrix", "heatmap"]),
+            self.make_target(4, "Interactive Features", "interactive-features", ["hover", "click", "zoom"]),
+            self.make_target(4, "Export Options", "export-options", ["export", "csv export", "visualization export"]),
+            self.make_target(4, "Research Applications", "research-applications", ["applications", "stimulus set validation", "exploratory analysis"]),
+            self.make_target(5, "Troubleshooting", keywords=["troubleshooting", "issues", "errors"]),
+            self.make_target(5, "Application Won't Start", "application-wont-start", ["won't start", "launch", "startup"]),
+            self.make_target(5, "Image Upload Problems", "image-upload-problems", ["upload problem", "not uploading"]),
+            self.make_target(5, "Slow Performance", "slow-performance", ["slow", "performance", "ram"]),
+            self.make_target(5, "Analysis Errors", "analysis-errors", ["analysis fails", "cnn error"]),
+            self.make_target(5, "Performance Optimization", "performance-optimization", ["optimization", "speed up"]),
+            self.make_target(6, "Keyboard Shortcuts", keywords=["shortcuts", "keyboard"]),
+            self.make_target(7, "API Reference", keywords=["api", "reference", "programmatic"]),
+        ]
+
+    def make_target(self, row, title, anchor=None, keywords=None):
+        """Create a normalized search target."""
+        terms = {self.normalize_search_text(title), self.normalize_search_text(self.nav_items[row])}
+        for keyword in keywords or []:
+            terms.add(self.normalize_search_text(keyword))
+        return {
+            "row": row,
+            "title": title,
+            "anchor": anchor,
+            "keywords": terms,
+        }
+
+    def normalize_search_text(self, text):
+        """Normalize search text for loose keyword matching."""
+        return " ".join(text.lower().replace("&", " ").replace("-", " ").split())
+
+    def matches_query(self, target, query):
+        """Return whether the query matches this search target."""
+        normalized_query = self.normalize_search_text(query)
+        if not normalized_query:
+            return True
+
+        for keyword in target["keywords"]:
+            if normalized_query in keyword or keyword in normalized_query:
+                return True
+        return False
+
+    def find_best_section_match(self, query):
+        """Find the best matching section or subsection for a query."""
+        normalized_query = self.normalize_search_text(query)
+        best_match = None
+        best_score = 0
+
+        for target in self.section_targets:
+            score = self.score_target_match(target, normalized_query)
+            if score > best_score:
+                best_score = score
+                best_match = target
+
+        return best_match
+
+    def score_target_match(self, target, query):
+        """Score how strongly a target matches the query."""
+        if not query:
+            return 0
+
+        score = 0
+        for keyword in target["keywords"]:
+            if query == keyword:
+                score = max(score, 120)
+            elif keyword.startswith(query):
+                score = max(score, 90)
+            elif query in keyword:
+                score = max(score, 80)
+            elif keyword in query:
+                score = max(score, 70)
+
+        if target.get("anchor"):
+            score += 5
+
+        return score
+
+    def build_highlight_terms(self, query):
+        """Build the terms that should be highlighted in the UI."""
+        normalized_query = self.normalize_search_text(query)
+        if not normalized_query:
+            return []
+
+        return [part for part in normalized_query.split() if part]
+
+    def update_nav_item_style(self, row, item, query, is_visible):
+        """Highlight matching navigation rows."""
+        if item is None:
+            return
+
+        if not query or not is_visible:
+            item.setBackground(Qt.GlobalColor.transparent)
+            item.setForeground(QColor("#102a43"))
+            item.setFont(QFont("Arial", 13, QFont.Weight.Normal))
+            return
+
+        row_matches = any(
+            target["row"] == row and self.matches_query(target, query)
+            for target in self.section_targets
+        )
+        if row_matches:
+            item.setBackground(QColor("#fff3bf"))
+            item.setForeground(QColor("#7c5c00"))
+            item.setFont(QFont("Arial", 13, QFont.Weight.Bold))
+            return
+
+        item.setBackground(Qt.GlobalColor.transparent)
+        item.setForeground(QColor("#102a43"))
+        item.setFont(QFont("Arial", 13, QFont.Weight.Normal))
+
+    def apply_content_highlighting(self):
+        """Highlight matching keywords in the active documentation content."""
+        extra_selections = []
+        if self.highlight_terms:
+            for term in self.highlight_terms:
+                if len(term) < 2:
+                    continue
+                extra_selections.extend(self.find_term_selections(term))
+
+        self.content_browser.setExtraSelections(extra_selections)
+
+    def find_term_selections(self, term):
+        """Return text selections for a search term."""
+        escaped_term = re.escape(term)
+        document_text = self.content_browser.toPlainText()
+        selections = []
+
+        for match in re.finditer(escaped_term, document_text, re.IGNORECASE):
+            cursor = self.content_browser.textCursor()
+            cursor.setPosition(match.start())
+            cursor.setPosition(match.end(), QTextCursor.MoveMode.KeepAnchor)
+
+            selection = QTextEdit.ExtraSelection()
+            selection.cursor = cursor
+
+            text_format = QTextCharFormat()
+            text_format.setBackground(QColor("#ffe58f"))
+            text_format.setForeground(QColor("#7c5c00"))
+            text_format.setFontWeight(QFont.Weight.Bold)
+            selection.format = text_format
+            selections.append(selection)
+
+        return selections
 
     def go_previous_section(self):
         """Go to previous visible section."""
@@ -379,6 +645,10 @@ class DocumentationTab(QWidget):
     def scroll_to_top(self):
         """Scroll documentation content to top."""
         self.content_browser.verticalScrollBar().setValue(0)
+
+    def clear_search(self):
+        """Clear the search field and reset the documentation browser."""
+        self.search_input.clear()
 
     def _has_visible_before(self, row):
         for idx in range(row - 1, -1, -1):
@@ -492,10 +762,10 @@ class DocumentationTab(QWidget):
         return """
         <h1>🚀 Getting Started</h1>
         
-        <h2>Welcome to Image Processing App</h2>
+        <a name="welcome"></a><h2>Welcome to Image Processing App</h2>
         <p>This application is designed for psychology researchers to analyze and modify images for visual perception studies.</p>
         
-        <h2>System Requirements</h2>
+        <a name="system-requirements"></a><h2>System Requirements</h2>
         <ul>
             <li><strong>Operating System:</strong> Windows 10/11 or macOS 10.14+</li>
             <li><strong>RAM:</strong> 8GB minimum, 16GB recommended</li>
@@ -503,14 +773,14 @@ class DocumentationTab(QWidget):
             <li><strong>Python:</strong> 3.8 or higher (included in installation)</li>
         </ul>
         
-        <h2>Installation Guide</h2>
+        <a name="installation-guide"></a><h2>Installation Guide</h2>
         <ol>
             <li>Download the installation package for your operating system</li>
             <li>Run the installer and follow the on-screen instructions</li>
             <li>Launch the application from your Start Menu or Applications folder</li>
         </ol>
         
-        <h2>Basic Workflow</h2>
+        <a name="basic-workflow"></a><h2>Basic Workflow</h2>
         <p>Follow these steps for a typical research session:</p>
         <ol>
             <li><strong>Upload Images:</strong> Use the Home tab to upload your stimulus images</li>
@@ -519,7 +789,7 @@ class DocumentationTab(QWidget):
             <li><strong>Interpret Results:</strong> View and export results in the Results tab</li>
         </ol>
         
-        <h2>Need Help?</h2>
+        <a name="need-help"></a><h2>Need Help?</h2>
         <p>If you encounter any issues:</p>
         <ul>
             <li>Check the <strong>Troubleshooting</strong> section</li>
@@ -532,7 +802,7 @@ class DocumentationTab(QWidget):
         return """
         <h1>🖼️ Image Upload Guide</h1>
         
-        <h2>Supported Formats</h2>
+        <a name="supported-formats"></a><h2>Supported Formats</h2>
         <ul>
             <li><strong>JPEG/JPG:</strong> Recommended for photographs</li>
             <li><strong>PNG:</strong> Recommended for images with transparency</li>
@@ -542,17 +812,17 @@ class DocumentationTab(QWidget):
         
         <h2>Upload Methods</h2>
         
-        <h3>Drag & Drop</h3>
+        <a name="drag-drop"></a><h3>Drag & Drop</h3>
         <p>Simply drag image files from your file explorer and drop them onto the Home tab.</p>
         <pre>1. Open your file explorer
 2. Select one or multiple images
 3. Drag them to the dashed upload area
 4. Release to upload</pre>
         
-        <h3>File Browser</h3>
+        <a name="file-browser"></a><h3>File Browser</h3>
         <p>Use the "Browse Images" button to select files through a dialog.</p>
         
-        <h3>Batch Upload</h3>
+        <a name="batch-upload"></a><h3>Batch Upload</h3>
         <p>For large datasets:</p>
         <ul>
             <li>Select multiple files (Ctrl+Click or Shift+Click)</li>
@@ -560,7 +830,7 @@ class DocumentationTab(QWidget):
             <li>Use consistent naming conventions for easier organization</li>
         </ul>
         
-        <h2>Best Practices</h2>
+        <a name="upload-best-practices"></a><h2>Best Practices</h2>
         <ul>
             <li><strong>Image Size:</strong> Recommended 500x500 to 2000x2000 pixels</li>
             <li><strong>File Size:</strong> Keep under 5MB per image for optimal performance</li>
@@ -568,7 +838,7 @@ class DocumentationTab(QWidget):
             <li><strong>Organization:</strong> Group related images in separate upload sessions</li>
         </ul>
         
-        <h2>Troubleshooting Upload Issues</h2>
+        <a name="upload-troubleshooting"></a><h2>Troubleshooting Upload Issues</h2>
         <ul>
             <li><strong>Format not supported:</strong> Convert images to JPEG or PNG</li>
             <li><strong>File too large:</strong> Resize images before upload</li>
@@ -580,9 +850,9 @@ class DocumentationTab(QWidget):
         return """
         <h1>✏️ Image Modification</h1>
         
-        <h2>Basic Adjustments</h2>
+        <a name="basic-adjustments"></a><h2>Basic Adjustments</h2>
         
-        <h3>Brightness & Contrast</h3>
+        <a name="brightness-contrast"></a><h3>Brightness & Contrast</h3>
         <p>Adjust these parameters to control visual perception variables:</p>
         <ul>
             <li><strong>Brightness:</strong> Overall light intensity (-100 to +100)</li>
@@ -590,7 +860,7 @@ class DocumentationTab(QWidget):
             <li><strong>Saturation:</strong> Color intensity (0 to 200%)</li>
         </ul>
         
-        <h3>Crop & Resize</h3>
+        <a name="crop-resize"></a><h3>Crop & Resize</h3>
         <p>Modify image dimensions for experimental consistency:</p>
         <ul>
             <li>Select specific regions of interest</li>
@@ -598,9 +868,9 @@ class DocumentationTab(QWidget):
             <li>Maintain aspect ratios for natural appearance</li>
         </ul>
         
-        <h2>Research-Specific Modifications</h2>
+        <a name="research-specific-modifications"></a><h2>Research-Specific Modifications</h2>
         
-        <h3>Visual Complexity Manipulation</h3>
+        <a name="visual-complexity-manipulation"></a><h3>Visual Complexity Manipulation</h3>
         <p>Create stimulus sets with controlled complexity levels:</p>
         <ul>
             <li>Adjust detail density</li>
@@ -608,14 +878,14 @@ class DocumentationTab(QWidget):
             <li>Modify pattern regularity</li>
         </ul>
         
-        <h3>Batch Processing</h3>
+        <a name="batch-processing"></a><h3>Batch Processing</h3>
         <p>Apply the same modification to multiple images:</p>
         <pre>1. Select multiple images in the Modification tab
 2. Choose your adjustment parameters
 3. Apply to all selected images
 4. Save modified versions with new filenames</pre>
         
-        <h2>Experimental Design Tips</h2>
+        <a name="experimental-design-tips"></a><h2>Experimental Design Tips</h2>
         <ul>
             <li>Keep a log of all modifications for reproducibility</li>
             <li>Save original images separately from modified versions</li>
@@ -628,10 +898,10 @@ class DocumentationTab(QWidget):
         return """
         <h1>🔍 Image Analysis</h1>
         
-        <h2>CNN-Based Similarity Analysis</h2>
+        <a name="cnn-similarity-analysis"></a><h2>CNN-Based Similarity Analysis</h2>
         <p>Our application uses Convolutional Neural Networks (CNNs) to analyze image relationships.</p>
         
-        <h3>Similarity Scores</h3>
+        <a name="similarity-scores"></a><h3>Similarity Scores</h3>
         <p>Pairwise similarity comparisons generate scores from 0 to 1:</p>
         <ul>
             <li><strong>0.0:</strong> Completely dissimilar</li>
@@ -639,7 +909,7 @@ class DocumentationTab(QWidget):
             <li><strong>1.0:</strong> Identical or very similar</li>
         </ul>
         
-        <h3>Analysis Configuration</h3>
+        <a name="analysis-configuration"></a><h3>Analysis Configuration</h3>
         <p>Configure your analysis in the Analysis Setup tab:</p>
         <ol>
             <li>Select the CNN model (VGG16, ResNet50, or custom)</li>
@@ -648,7 +918,7 @@ class DocumentationTab(QWidget):
             <li>Run analysis and monitor progress</li>
         </ol>
         
-        <h2>Complexity Metrics</h2>
+        <a name="complexity-metrics"></a><h2>Complexity Metrics</h2>
         <p>Additional image characteristics analyzed:</p>
         <ul>
             <li><strong>Visual Clutter:</strong> Density of visual elements</li>
@@ -657,7 +927,7 @@ class DocumentationTab(QWidget):
             <li><strong>Symmetry:</strong> Bilateral and rotational symmetry</li>
         </ul>
         
-        <h2>Interpretation Guidelines</h2>
+        <a name="interpretation-guidelines"></a><h2>Interpretation Guidelines</h2>
         <ul>
             <li>Similarity scores are relative within your image set</li>
             <li>Consider the research context when interpreting scores</li>
@@ -670,42 +940,42 @@ class DocumentationTab(QWidget):
         return """
         <h1>📊 Results Interpretation</h1>
         
-        <h2>Similarity Matrix</h2>
+        <a name="similarity-matrix"></a><h2>Similarity Matrix</h2>
         <p>The similarity matrix shows pairwise comparisons between all images in your set.</p>
         
-        <h3>Reading the Matrix</h3>
+        <a name="reading-the-matrix"></a><h3>Reading the Matrix</h3>
         <ul>
             <li><strong>Diagonal:</strong> Self-comparisons (always 1.0)</li>
             <li><strong>Upper/Lower triangles:</strong> Mirror image pairs</li>
             <li><strong>Color coding:</strong> Heatmap indicates similarity strength</li>
         </ul>
         
-        <h3>Interactive Features</h3>
+        <a name="interactive-features"></a><h3>Interactive Features</h3>
         <ul>
             <li><strong>Hover:</strong> See exact similarity scores</li>
             <li><strong>Click:</strong> View detailed pairwise comparison</li>
             <li><strong>Zoom:</strong> Focus on specific matrix regions</li>
         </ul>
         
-        <h2>Export Options</h2>
+        <a name="export-options"></a><h2>Export Options</h2>
         
-        <h3>CSV Export</h3>
+        <a name="csv-export"></a><h3>CSV Export</h3>
         <p>Export similarity matrices for statistical analysis:</p>
         <pre>Image1,Image2,Image3
 Image1,1.00,0.75,0.32
 Image2,0.75,1.00,0.28
 Image3,0.32,0.28,1.00</pre>
         
-        <h3>Visualization Export</h3>
+        <a name="visualization-export"></a><h3>Visualization Export</h3>
         <ul>
             <li><strong>High-resolution heatmaps:</strong> For publications and presentations</li>
             <li><strong>Scatter plots:</strong> For dimensionality reduction views</li>
             <li><strong>Cluster diagrams:</strong> For group structure visualization</li>
         </ul>
         
-        <h2>Research Applications</h2>
+        <a name="research-applications"></a><h2>Research Applications</h2>
         
-        <h3>Stimulus Set Validation</h3>
+        <a name="stimulus-set-validation"></a><h3>Stimulus Set Validation</h3>
         <p>Ensure your image sets have appropriate characteristics:</p>
         <ul>
             <li>Verify intended similarity relationships</li>
@@ -713,7 +983,7 @@ Image3,0.32,0.28,1.00</pre>
             <li>Confirm experimental condition separation</li>
         </ul>
         
-        <h3>Exploratory Analysis</h3>
+        <a name="exploratory-analysis"></a><h3>Exploratory Analysis</h3>
         <p>Discover unexpected patterns in your stimuli:</p>
         <ul>
             <li>Cluster analysis of image groups</li>
@@ -726,37 +996,37 @@ Image3,0.32,0.28,1.00</pre>
         return """
         <h1>❓ Troubleshooting Guide</h1>
         
-        <h2>Common Issues and Solutions</h2>
+        <a name="common-issues-and-solutions"></a><h2>Common Issues and Solutions</h2>
         
-        <h3>Application Won't Start</h3>
+        <a name="application-wont-start"></a><h3>Application Won't Start</h3>
         <ul>
             <li><strong>Issue:</strong> Application fails to launch</li>
             <li><strong>Solution:</strong> Reinstall the application and ensure all dependencies are installed</li>
             <li><strong>Prevention:</strong> Keep your operating system updated</li>
         </ul>
         
-        <h3>Image Upload Problems</h3>
+        <a name="image-upload-problems"></a><h3>Image Upload Problems</h3>
         <ul>
             <li><strong>Issue:</strong> Images not uploading</li>
             <li><strong>Solution:</strong> Check file format and size restrictions</li>
             <li><strong>Prevention:</strong> Use supported formats (JPEG, PNG) under 5MB</li>
         </ul>
         
-        <h3>Slow Performance</h3>
+        <a name="slow-performance"></a><h3>Slow Performance</h3>
         <ul>
             <li><strong>Issue:</strong> Application runs slowly, especially with large image sets</li>
             <li><strong>Solution:</strong> Close other applications, increase system RAM if possible</li>
             <li><strong>Prevention:</strong> Work with smaller image batches, use optimized image sizes</li>
         </ul>
         
-        <h3>Analysis Errors</h3>
+        <a name="analysis-errors"></a><h3>Analysis Errors</h3>
         <ul>
             <li><strong>Issue:</strong> CNN analysis fails or produces errors</li>
             <li><strong>Solution:</strong> Check that images are properly loaded and formatted</li>
             <li><strong>Prevention:</strong> Validate images before analysis, ensure consistent image dimensions</li>
         </ul>
         
-        <h2>Performance Optimization</h2>
+        <a name="performance-optimization"></a><h2>Performance Optimization</h2>
         
         <h3>System Settings</h3>
         <ul>
