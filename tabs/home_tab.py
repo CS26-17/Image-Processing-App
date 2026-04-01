@@ -80,12 +80,12 @@ class HomeTab(QWidget):
         file_group = QGroupBox("File Operations")
         file_layout = QVBoxLayout()
 
-        self.upload_button = QPushButton("📁 Upload Images")
+        self.upload_button = QPushButton("Upload Images")
         self.upload_button.setStyleSheet("padding: 8px; font-size: 12px;")
         self.upload_button.clicked.connect(self.upload_images)
         file_layout.addWidget(self.upload_button)
 
-        self.clear_button = QPushButton("🗑️ Clear All Images")
+        self.clear_button = QPushButton("Clear All Images")
         self.clear_button.setStyleSheet("padding: 8px; font-size: 12px;")
         self.clear_button.clicked.connect(self.clear_images)
         file_layout.addWidget(self.clear_button)
@@ -97,12 +97,12 @@ class HomeTab(QWidget):
         nav_group = QGroupBox("Navigation")
         nav_layout = QHBoxLayout()
 
-        self.prev_button = QPushButton("⬅ Previous")
+        self.prev_button = QPushButton("Previous")
         self.prev_button.setStyleSheet("padding: 6px; font-size: 11px;")
         self.prev_button.clicked.connect(self.show_previous_image)
         nav_layout.addWidget(self.prev_button)
 
-        self.next_button = QPushButton("Next ➡")
+        self.next_button = QPushButton("Next")
         self.next_button.setStyleSheet("padding: 6px; font-size: 11px;")
         self.next_button.clicked.connect(self.show_next_image)
         nav_layout.addWidget(self.next_button)
@@ -114,7 +114,7 @@ class HomeTab(QWidget):
         process_group = QGroupBox("Processing")
         process_layout = QVBoxLayout()
 
-        self.process_button = QPushButton("⚡ Process Current Image")
+        self.process_button = QPushButton("Edit Selected Image")
         self.process_button.setStyleSheet(
             "padding: 8px; font-size: 12px; background-color: #4CAF50; color: white;"
         )
@@ -400,7 +400,9 @@ class HomeTab(QWidget):
         # Access the main window's modification_page if available
         if self.main_window is not None and hasattr(self.main_window, "modification_page"):
             try:
-                self.main_window.modification_page.load_image(self.current_image_path)
+                self.main_window.modification_page.set_images(
+                    self.image_paths, self.current_index
+                )
                 if hasattr(self.main_window, "tab_widget"):
                     self.main_window.tab_widget.setCurrentWidget(
                         self.main_window.modification_page
@@ -435,7 +437,7 @@ class HomeTab(QWidget):
                             font-weight: bold;
                         }
                     """)
-                    self.image_label.setText("✓ Release to upload image(s)")
+                    self.image_label.setText("Release to upload image(s)")
                     self.status_label.setText("Ready to drop image(s).")
                     return
 

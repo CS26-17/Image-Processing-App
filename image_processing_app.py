@@ -87,16 +87,27 @@ class ImageProcessingApp(QMainWindow):
     # Tabs
     # ------------------------------------------------------------------
     def setup_home_tab(self) -> None:
-        """Create and add the Home tab using HomeTab."""
+        """Create and add the Upload tab."""
         self.home_tab = HomeTab(parent=self)
-        self.tab_widget.addTab(self.home_tab, "🏠 Home")
+        self.tab_widget.addTab(self.home_tab, "Upload")
 
     def setup_other_tabs(self) -> None:
-        """Create and add the remaining tabs."""
+        """Create and add the remaining tabs in pipeline order."""
+        # Edit Tab (image modification)
+        self.modification_page = ImageModificationPage(parent=self)
+        self.tab_widget.addTab(self.modification_page, "Edit")
+
+        # Analyze Tab
+        self.analysis_setup_tab = AnalysisSetupTab()
+        self.tab_widget.addTab(self.analysis_setup_tab, "Analyze")
+
         # Results Tab
         self.results_tab = ResultsTab()
-        self.tab_widget.addTab(self.results_tab, "📊 Results")
+        self.tab_widget.addTab(self.results_tab, "Results")
 
+        # Help Tab
+        self.docs_tab = DocumentationTab(parent=self)
+        self.tab_widget.addTab(self.docs_tab, "Help")
         # Documentation launcher tab
         self.docs_launcher_tab = QWidget()
         self.documentation_tab_index = self.tab_widget.addTab(

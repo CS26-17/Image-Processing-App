@@ -133,6 +133,7 @@ class DocumentationTab(QWidget):
         """)
         
         # Add navigation items
+        nav_items = [
         self.nav_items = [
             "Getting Started",
             "Image Upload Guide",
@@ -150,6 +151,8 @@ class DocumentationTab(QWidget):
         self.nav_list.currentRowChanged.connect(self.on_nav_changed)
         nav_layout.addWidget(self.nav_list)
         
+        # PDF Download button
+        pdf_button = QPushButton("Download User Manual (PDF)")
         # User manual download button (supports PDF/Word selection)
         pdf_button = QPushButton("📥 Download User Manual")
         pdf_button.setStyleSheet("""
@@ -760,7 +763,7 @@ class DocumentationTab(QWidget):
     # Documentation content methods
     def get_getting_started_content(self):
         return """
-        <h1>🚀 Getting Started</h1>
+        <h1>Getting Started</h1>
         
         <a name="welcome"></a><h2>Welcome to Image Processing App</h2>
         <p>This application is designed for psychology researchers to analyze and modify images for visual perception studies.</p>
@@ -800,7 +803,7 @@ class DocumentationTab(QWidget):
     
     def get_image_upload_content(self):
         return """
-        <h1>🖼️ Image Upload Guide</h1>
+        <h1>Image Upload Guide</h1>
         
         <a name="supported-formats"></a><h2>Supported Formats</h2>
         <ul>
@@ -848,7 +851,7 @@ class DocumentationTab(QWidget):
     
     def get_image_modification_content(self):
         return """
-        <h1>✏️ Image Modification</h1>
+        <h1>Image Modification</h1>
         
         <a name="basic-adjustments"></a><h2>Basic Adjustments</h2>
         
@@ -896,7 +899,7 @@ class DocumentationTab(QWidget):
     
     def get_image_analysis_content(self):
         return """
-        <h1>🔍 Image Analysis</h1>
+        <h1>Image Analysis</h1>
         
         <a name="cnn-similarity-analysis"></a><h2>CNN-Based Similarity Analysis</h2>
         <p>Our application uses Convolutional Neural Networks (CNNs) to analyze image relationships.</p>
@@ -938,7 +941,7 @@ class DocumentationTab(QWidget):
     
     def get_results_interpretation_content(self):
         return """
-        <h1>📊 Results Interpretation</h1>
+        <h1>Results Interpretation</h1>
         
         <a name="similarity-matrix"></a><h2>Similarity Matrix</h2>
         <p>The similarity matrix shows pairwise comparisons between all images in your set.</p>
@@ -994,7 +997,7 @@ Image3,0.32,0.28,1.00</pre>
     
     def get_troubleshooting_content(self):
         return """
-        <h1>❓ Troubleshooting Guide</h1>
+        <h1>Troubleshooting Guide</h1>
         
         <a name="common-issues-and-solutions"></a><h2>Common Issues and Solutions</h2>
         
@@ -1055,7 +1058,7 @@ Image3,0.32,0.28,1.00</pre>
     
     def get_keyboard_shortcuts_content(self):
         return """
-        <h1>⌨️ Keyboard Shortcuts</h1>
+        <h1>Keyboard Shortcuts</h1>
         
         <h2>Global Shortcuts</h2>
         <table border="1" style="border-collapse: collapse; width: 100%; margin: 15px 0;">
@@ -1143,7 +1146,7 @@ Image3,0.32,0.28,1.00</pre>
     
     def get_api_reference_content(self):
         return """
-        <h1>🔧 API Reference</h1>
+        <h1>API Reference</h1>
         
         <h2>Overview</h2>
         <p>The Image Processing App provides programmatic access to analysis functions for advanced users and integration with other research tools.</p>
