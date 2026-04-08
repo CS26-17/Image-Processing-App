@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout,
     QWidget, QLabel, QTabWidget
 )
-from PySide6.QtCore import Qt, QSignalBlocker
+from PySide6.QtCore import Qt
 
 from tabs.Image_Modification_Page import ImageModificationPage
 from tabs.results_tab import ResultsTab
@@ -15,16 +15,6 @@ from tabs.documentation_tab import DocumentationTab
 from tabs.home_tab import HomeTab
 from tabs.analysis_setup_tab import AnalysisSetupTab
 
-
-class DocumentationWindow(QMainWindow):
-    """Standalone window for the documentation browser."""
-
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Documentation")
-        self.setGeometry(180, 140, 1280, 860)
-        self.docs_tab = DocumentationTab(parent=self)
-        self.setCentralWidget(self.docs_tab)
 
 
 class ImageProcessingApp(QMainWindow):
@@ -74,14 +64,10 @@ class ImageProcessingApp(QMainWindow):
         # Central tab widget
         self.tab_widget = QTabWidget()
         self.setCentralWidget(self.tab_widget)
-        self.documentation_window = DocumentationWindow()
-        self.documentation_tab_index = -1
-        self.last_main_tab_index = 0
 
         # Set up all tabs
         self.setup_home_tab()
         self.setup_other_tabs()
-        self.tab_widget.currentChanged.connect(self.handle_tab_change)
 
     # ------------------------------------------------------------------
     # Tabs
@@ -100,6 +86,7 @@ class ImageProcessingApp(QMainWindow):
         # Analyze Tab
         self.analysis_setup_tab = AnalysisSetupTab()
         self.tab_widget.addTab(self.analysis_setup_tab, "Analyze")
+        self.analysis_setup_tab.analysis_complete.connect(self._on_analysis_complete)
 
         # Results Tab
         self.results_tab = ResultsTab()
@@ -108,44 +95,6 @@ class ImageProcessingApp(QMainWindow):
         # Help Tab
         self.docs_tab = DocumentationTab(parent=self)
         self.tab_widget.addTab(self.docs_tab, "Help")
-        # Documentation launcher tab
-        self.docs_launcher_tab = QWidget()
-        self.documentation_tab_index = self.tab_widget.addTab(
-            self.docs_launcher_tab,
-            "📚 Documentation",
-        )
-
-        # Modification Tab
-        self.modification_page = ImageModificationPage(parent=self)
-        self.tab_widget.addTab(self.modification_page, "🛠️ Modification")
-
-        # Analysis Setup Tab (simple placeholder, as before)
-        self.analysis_setup_tab = AnalysisSetupTab()
-        self.tab_widget.addTab(self.analysis_setup_tab, "⚙️ Analysis Setup")
-
-        # When analysis finishes, load results and switch to Results tab
-        self.analysis_setup_tab.analysis_complete.connect(self._on_analysis_complete)
-
-    def handle_tab_change(self, index: int) -> None:
-        """Open documentation in a standalone window when its tab is clicked."""
-        if index == self.documentation_tab_index:
-            self.open_documentation_window()
-            fallback_index = self.last_main_tab_index
-            if fallback_index == self.documentation_tab_index or fallback_index < 0:
-                fallback_index = 0
-
-            blocker = QSignalBlocker(self.tab_widget)
-            self.tab_widget.setCurrentIndex(fallback_index)
-            del blocker
-            return
-
-        self.last_main_tab_index = index
-
-    def open_documentation_window(self) -> None:
-        """Show the documentation window and bring it to the front."""
-        self.documentation_window.show()
-        self.documentation_window.raise_()
-        self.documentation_window.activateWindow()
 
     def _on_analysis_complete(self, output_dir):
         self.results_tab.load_from_directory(output_dir)
