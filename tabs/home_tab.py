@@ -93,8 +93,25 @@ class HomeTab(QWidget):
         file_group.setLayout(file_layout)
         controls_layout.addWidget(file_group)
 
-        # Navigation group (previous / next)
+        # Navigation group (current image counter + previous / next)
         nav_group = QGroupBox("Navigation")
+        nav_outer_layout = QVBoxLayout()
+
+        self.image_counter_label = QLabel("0 of 0 images")
+        self.image_counter_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.image_counter_label.setStyleSheet("""
+            QLabel {
+                padding: 14px 18px;
+                background-color: #eef6ff;
+                border: 2px solid #90caf9;
+                border-radius: 8px;
+                font-size: 18px;
+                font-weight: bold;
+                color: #1565c0;
+            }
+        """)
+        nav_outer_layout.addWidget(self.image_counter_label)
+
         nav_layout = QHBoxLayout()
 
         self.prev_button = QPushButton("Previous")
@@ -102,12 +119,13 @@ class HomeTab(QWidget):
         self.prev_button.clicked.connect(self.show_previous_image)
         nav_layout.addWidget(self.prev_button)
 
-        self.next_button = QPushButton("Next")
+        self.next_button = QPushButton("Next Image")
         self.next_button.setStyleSheet("padding: 6px; font-size: 11px;")
         self.next_button.clicked.connect(self.show_next_image)
         nav_layout.addWidget(self.next_button)
 
-        nav_group.setLayout(nav_layout)
+        nav_outer_layout.addLayout(nav_layout)
+        nav_group.setLayout(nav_outer_layout)
         controls_layout.addWidget(nav_group)
 
         # Processing group
@@ -170,11 +188,17 @@ class HomeTab(QWidget):
         if count == 0 or self.current_index is None or self.current_image_path is None:
             self.status_label.setText(f"{prefix} (0 loaded)")
         else:
-            idx = self.current_index + 1
             file_name = os.path.basename(self.current_image_path)
-            self.status_label.setText(
-                f"{prefix}: {file_name} | Image {idx}/{count} (total {count})"
-            )
+            self.status_label.setText(f"{prefix}: {file_name} ({count} loaded)")
+
+    def _update_image_counter(self) -> None:
+        """Update the prominent current-image counter label."""
+        count = len(self.image_paths)
+        if count == 0 or self.current_index is None:
+            self.image_counter_label.setText("0 of 0 images")
+            return
+
+        self.image_counter_label.setText(f"{self.current_index + 1} of {count} images")
 
     def _show_image_at_index(self, index: int) -> None:
         """
@@ -190,6 +214,7 @@ class HomeTab(QWidget):
         self.current_index = index
         self.current_image_path = self.image_paths[index]
         self.display_image(self.current_image_path)
+        self._update_image_counter()
         self._update_status_loaded()
 
     def _ask_how_to_handle_existing(self, new_paths: List[str]) -> Optional[List[str]]:
@@ -300,6 +325,7 @@ class HomeTab(QWidget):
         self.image_label.setStyleSheet(self.base_image_style)
 
         self.info_label.setText("No image loaded")
+        self._update_image_counter()
         self._update_status_loaded()
 
     # ------------------------------------------------------------------
