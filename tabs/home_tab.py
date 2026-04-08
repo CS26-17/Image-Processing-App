@@ -6,6 +6,8 @@ Layout matches the original Home tab in image_processing_app.py:
 """
 
 import os
+import shutil
+import tempfile
 from typing import List, Optional
 
 from PySide6.QtWidgets import (
@@ -138,6 +140,18 @@ class HomeTab(QWidget):
         )
         self.process_button.clicked.connect(self.process_images)
         process_layout.addWidget(self.process_button)
+
+        # Analyze Images
+        self.analyse_button = QPushButton("Analyse Images")
+        self.analyse_button.setStyleSheet(
+            "padding: 8px; font-size: 12px; background-color: #7B1FA2; color: white;"
+        )
+        self.analyse_button.setToolTip(
+            "Send the currently loaded images to the Analysis Setup tab.\n"
+            "The folder containing your images will be pre-filled automatically."
+        )
+        self.analyse_button.clicked.connect(self.go_to_analysis)
+        process_layout.addWidget(self.analyse_button)
 
         process_group.setLayout(process_layout)
         controls_layout.addWidget(process_group)
@@ -442,7 +456,51 @@ class HomeTab(QWidget):
             self.status_label.setText(
                 "Modification page is not available. Cannot process image."
             )
-
+    def go_to_analysis(self) -> None:
+        """
+        Navigate to the Analysis Setup tab.
+ 
+        If images are loaded, copies ONLY the user-selected images into a
+        temporary folder and passes that to the analysis tab — so the analysis
+        runs on exactly the images the user chose, not every file that happens
+        to sit in the same source directory.
+ 
+        The temp folder is cleaned up automatically by the OS on exit.
+        The user can still click Browse on the Analysis tab to pick a
+        different folder entirely.
+        """
+        if self.main_window is None:
+            self.status_label.setText("Cannot navigate: main window not available.")
+            return
+ 
+        tab_widget = getattr(self.main_window, "tab_widget", None)
+        analysis_tab = getattr(self.main_window, "analysis_setup_tab", None)
+ 
+        if tab_widget is None or analysis_tab is None:
+            self.status_label.setText("Analysis tab is not available.")
+            return
+ 
+        if self.image_paths:
+            # Create a temp folder and copy only the selected images into it
+            tmp_dir = tempfile.mkdtemp(prefix="img_analysis_")
+            for src in self.image_paths:
+                dst = os.path.join(tmp_dir, os.path.basename(src))
+                # If two selected files share a name, make the destination unique
+                if os.path.exists(dst):
+                    base, ext = os.path.splitext(os.path.basename(src))
+                    dst = os.path.join(tmp_dir, f"{base}_{id(src)}{ext}")
+                shutil.copy2(src, dst)
+ 
+            analysis_tab.set_folder(tmp_dir)
+            self.status_label.setText(
+                f"{len(self.image_paths)} image(s) sent to Analysis tab."
+            )
+        else:
+            self.status_label.setText(
+                "Switched to Analysis tab — no images loaded, please select a folder there."
+            )
+ 
+        tab_widget.setCurrentWidget(analysis_tab)
     # ------------------------------------------------------------------
     # Drag & drop (Qt events)
     # ------------------------------------------------------------------
