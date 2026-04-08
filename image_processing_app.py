@@ -63,6 +63,7 @@ class ImageProcessingApp(QMainWindow):
 
         # Central tab widget
         self.tab_widget = QTabWidget()
+        self.tab_widget.setMovable(True)
         self.setCentralWidget(self.tab_widget)
 
         # Set up all tabs
@@ -79,7 +80,7 @@ class ImageProcessingApp(QMainWindow):
 
     def setup_other_tabs(self) -> None:
         """Create and add the remaining tabs in pipeline order."""
-        # Edit Tab (image modification)
+        # Edit tab stays next to Upload by default.
         self.modification_page = ImageModificationPage(parent=self)
         self.tab_widget.addTab(self.modification_page, "Edit")
 
