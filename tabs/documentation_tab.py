@@ -133,7 +133,6 @@ class DocumentationTab(QWidget):
         """)
         
         # Add navigation items
-        nav_items = [
         self.nav_items = [
             "Getting Started",
             "Image Upload Guide",
