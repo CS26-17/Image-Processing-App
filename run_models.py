@@ -75,7 +75,7 @@ def load_model(model_name):
     else:
         raise ValueError("Not an available model.")
     
-def extract_features(model, images):
+def extract_features(model, images, queue=None):
     transform = get_transform()
     features = []
     total = len(images)
@@ -86,8 +86,43 @@ def extract_features(model, images):
             feat = feat.view(feat.size(0), -1)#making output a 1D vector
             features.append(feat.numpy()[0]) #changing it into a numpy array and appending to features
         progress = int((i/total) * 100)
-        print(f"PROGRESS:{progress}", flush=True)
-    return np.array(features)    
+        if queue is not None:
+            queue.put(("PROGRESS", progress))
+        else:
+            print(f"PROGRESS:{progress}", flush=True)
+    return np.array(features)
+
+def run_cnn_analysis_worker(model_name, folder, result_name, output_dir, queue):
+    """
+    Multiprocessing-compatible entry point for CNN analysis.
+    Reports progress and completion/errors via queue instead of stdout,
+    which works correctly in both development and frozen/packaged builds.
+    """
+    try:
+        images, image_names = load_images(folder)
+        if len(images) == 0:
+            queue.put(("ERROR", "No images found in the selected folder."))
+            return
+        model = load_model(model_name)
+        features = extract_features(model, images, queue=queue)
+        sim_matrix = cosine_similarity(features)
+        df = pd.DataFrame(sim_matrix, index=image_names, columns=image_names)
+
+        os.makedirs(output_dir, exist_ok=True)
+        csv_path = os.path.join(output_dir, f"{result_name}_similarity.csv")
+        heat_path = os.path.join(output_dir, f"{result_name}heatmap.png")
+
+        df.to_csv(csv_path)
+        plt.figure(figsize=(10, 8))
+        sns.heatmap(df, cmap="coolwarm")
+        plt.tight_layout()
+        plt.savefig(heat_path, dpi=300)
+        plt.close()
+
+        queue.put(("DONE", output_dir))
+    except Exception as e:
+        queue.put(("ERROR", str(e)))
+
 
 def compute_pairwise_similarity(features, image_names):
     sim_matrix = cosine_similarity(features)
