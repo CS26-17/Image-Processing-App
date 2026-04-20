@@ -76,10 +76,18 @@ class AnalysisSetupTab(QWidget):
         """
         btn = QPushButton("?")
         btn.setFixedSize(22, 22)
+        btn.setObjectName("infoButton")
         btn.setStyleSheet("""
-            QPushButton { font-size: 13px; border: 2px solid #3b82f6;
-                          border-radius: 11px; color: #3b82f6; background: white; }
-            QPushButton:hover { border-color: #2563eb; color: #2563eb; }
+            QPushButton#infoButton {
+                font-size: 12px;
+                font-weight: bold;
+                border: 2px solid #3b82f6;
+                border-radius: 11px;
+                color: #1e3a5f;
+                background: white;
+                padding: 0px;
+            }
+            QPushButton#infoButton:hover { background: #eff6ff; }
         """)
         # Capture text in a default-arg lambda so each button keeps its own message
         btn.clicked.connect(
@@ -209,7 +217,7 @@ class AnalysisSetupTab(QWidget):
 
         doc_folder_btn = self._make_info_button(
             "Select the folder containing the images you want to analyse.\n\n"
-            "All supported image files (JPG, PNG, BMP, TIFF, WEBP) inside\n"
+            "All supported image files (JPG, JPEG, GIF, PNG) inside\n"
             "the folder will be included in the analysis.\n\n"
             "If you arrived here via the 'Analyse Images' button on the Upload\n"
             "tab, your uploaded images are already pre-filled here and you do\n"
