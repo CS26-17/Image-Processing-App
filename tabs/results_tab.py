@@ -66,8 +66,6 @@ class ResultsTab(QWidget):
         self.heatmap_image = None
         self.heatmap_image_path = None
         self.object_groups = {}  # Store object groupings
-        self.current_filter_obj1 = None
-        self.current_filter_obj2 = None
         self.image_folder = None      # Directory where source images live
         self.selected_img1 = None     # Currently selected image filenames
         self.selected_img2 = None
@@ -208,121 +206,7 @@ class ResultsTab(QWidget):
         matrix_tab_layout.addWidget(self.similarity_table)
         self.results_tabs.addTab(matrix_tab, "Full Matrix")
 
-        # Tab 3: Filtered View - Compare specific objects
-        filter_tab = QWidget()
-        filter_tab_layout = QVBoxLayout(filter_tab)
-
-        # Filter controls
-        filter_controls = QWidget()
-        filter_controls_layout = QHBoxLayout(filter_controls)
-        filter_controls_layout.setContentsMargins(0, 0, 0, 10)
-
-        label_style = "color: #374151; font-weight: bold;"
-
-        obj1_label = QLabel("Object 1:")
-        obj1_label.setStyleSheet(label_style)
-        filter_controls_layout.addWidget(obj1_label)
-        self.filter_obj1_combo = QComboBox()
-        self.filter_obj1_combo.setMinimumWidth(150)
-        self.filter_obj1_combo.currentTextChanged.connect(self.apply_filter)
-        filter_controls_layout.addWidget(self.filter_obj1_combo)
-
-        obj2_label = QLabel("Object 2:")
-        obj2_label.setStyleSheet(label_style)
-        filter_controls_layout.addWidget(obj2_label)
-        self.filter_obj2_combo = QComboBox()
-        self.filter_obj2_combo.setMinimumWidth(150)
-        self.filter_obj2_combo.currentTextChanged.connect(self.apply_filter)
-        filter_controls_layout.addWidget(self.filter_obj2_combo)
-
-        btn_reset_filter = QPushButton("Reset")
-        btn_reset_filter.clicked.connect(self.reset_filter)
-        btn_reset_filter.setStyleSheet("""
-            QPushButton {
-                background-color: #6b7280;
-                color: white;
-                border: none;
-                padding: 6px 12px;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #4b5563;
-            }
-        """)
-        filter_controls_layout.addWidget(btn_reset_filter)
-        filter_controls_layout.addStretch()
-
-        filter_tab_layout.addWidget(filter_controls)
-
-        self.filtered_table = QTableWidget()
-        self.filtered_table.setMinimumSize(600, 350)
-        filter_tab_layout.addWidget(self.filtered_table)
-
-        # Filtered stats
-        self.filtered_stats_label = QLabel("")
-        self.filtered_stats_label.setStyleSheet("""
-            QLabel {
-                color: #374151;
-                background-color: #f0f9ff;
-                border: 1px solid #bae6fd;
-                border-radius: 4px;
-                padding: 8px;
-                margin-top: 10px;
-            }
-        """)
-        filter_tab_layout.addWidget(self.filtered_stats_label)
-
-        self.results_tabs.addTab(filter_tab, "Compare Objects")
-
-        # Tab 4: Object Summary - Per-object statistics
-        summary_tab = QWidget()
-        summary_tab_layout = QVBoxLayout(summary_tab)
-        summary_tab_layout.setContentsMargins(6, 6, 6, 6)
-        summary_tab_layout.setSpacing(4)
-
-        # Compact header row: description + legend side by side
-        header_widget = QWidget()
-        header_layout = QHBoxLayout(header_widget)
-        header_layout.setContentsMargins(0, 0, 0, 0)
-        header_layout.setSpacing(12)
-
-        summary_desc = QLabel(
-            "Mean similarity between object groups. "
-            "<b>Diagonal</b> = same-object views. "
-            "<b>Off-diagonal</b> = cross-object. "
-            "Last 3 cols = intra-group stats."
-        )
-        summary_desc.setStyleSheet("color: #374151; font-size: 11px; padding: 4px 6px; "
-                                   "background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 3px;")
-        summary_desc.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        header_layout.addWidget(summary_desc)
-
-        # Compact legend
-        legend_items = [
-            ("#add8e6", "Same obj"),
-            ("#ffffe0", "High ≥0.6"),
-            ("#ffdab9", "Mod ≥0.4"),
-            ("#90ee90", "Low <0.4"),
-            ("#e8f0ff", "Intra stats"),
-        ]
-        for color, text in legend_items:
-            swatch = QLabel()
-            swatch.setFixedSize(12, 12)
-            swatch.setStyleSheet(f"background-color: {color}; border: 1px solid #aaa; border-radius: 2px;")
-            desc_lbl = QLabel(text)
-            desc_lbl.setStyleSheet("color: #374151; font-size: 10px;")
-            header_layout.addWidget(swatch)
-            header_layout.addWidget(desc_lbl)
-
-        summary_tab_layout.addWidget(header_widget)
-
-        self.summary_table = QTableWidget()
-        self.summary_table.setMinimumSize(600, 350)
-        summary_tab_layout.addWidget(self.summary_table)
-
-        self.results_tabs.addTab(summary_tab, "Object Summary")
-
-        # Tab 5: Top Matches - Show highest/lowest similarity pairs
+        # Tab 3: Top Matches - Show highest/lowest similarity pairs
         matches_tab = QWidget()
         matches_tab_layout = QVBoxLayout(matches_tab)
 
@@ -384,7 +268,7 @@ class ResultsTab(QWidget):
         self.comparison_section.content_layout.addWidget(folder_row)
 
         # Instruction label
-        comp_hint = QLabel("Click any data cell in the Full Matrix, Compare Objects, or Top Matches table to select an image pair.")
+        comp_hint = QLabel("Click any data cell in the Full Matrix or Top Matches table to select an image pair.")
         comp_hint.setStyleSheet("color: #6b7280; font-size: 11px; font-style: italic; margin-bottom: 4px;")
         self.comparison_section.content_layout.addWidget(comp_hint)
 
@@ -516,7 +400,6 @@ class ResultsTab(QWidget):
 
         # Connect table cell clicks to image comparison
         self.similarity_table.cellClicked.connect(self.on_matrix_cell_clicked)
-        self.filtered_table.cellClicked.connect(self.on_matrix_cell_clicked)
         self.matches_table.cellClicked.connect(self.on_matches_row_clicked)
 
         # Add stretch to push content to top
@@ -860,13 +743,11 @@ class ResultsTab(QWidget):
         # Make table read-only
         self.similarity_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
 
-        # Extract object groups and populate filters
+        # Extract object groups for statistics
         self.extract_object_groups()
 
-        # Update all analysis views
-        self.update_object_summary()
+        # Update analysis views
         self.update_top_matches()
-        self.apply_filter()
 
     def display_heatmap(self):
         """Display the heatmap image"""
@@ -986,221 +867,6 @@ class ResultsTab(QWidget):
                     self.object_groups[obj_key] = []
                 self.object_groups[obj_key].append(name)
 
-        # Update filter dropdowns
-        self.filter_obj1_combo.clear()
-        self.filter_obj2_combo.clear()
-
-        self.filter_obj1_combo.addItem("All Objects")
-        self.filter_obj2_combo.addItem("All Objects")
-
-        for obj_key in sorted(self.object_groups.keys(), key=lambda x: int(x.split()[1])):
-            self.filter_obj1_combo.addItem(obj_key)
-            self.filter_obj2_combo.addItem(obj_key)
-
-    def apply_filter(self):
-        """Apply object filter to show subset of similarity matrix"""
-        if self.similarity_data is None:
-            return
-
-        obj1 = self.filter_obj1_combo.currentText()
-        obj2 = self.filter_obj2_combo.currentText()
-
-        if obj1 == "All Objects" and obj2 == "All Objects":
-            filtered_data = self.similarity_data
-        else:
-            rows = self.object_groups.get(obj1, list(self.similarity_data.index)) if obj1 != "All Objects" else list(self.similarity_data.index)
-            cols = self.object_groups.get(obj2, list(self.similarity_data.columns)) if obj2 != "All Objects" else list(self.similarity_data.columns)
-            filtered_data = self.similarity_data.loc[rows, cols]
-
-        self.display_filtered_table(filtered_data)
-        self.update_filtered_stats(filtered_data, obj1, obj2)
-
-    def reset_filter(self):
-        """Reset filters to show all data"""
-        self.filter_obj1_combo.setCurrentIndex(0)
-        self.filter_obj2_combo.setCurrentIndex(0)
-
-    def display_filtered_table(self, data):
-        """Display filtered data in the filtered table"""
-        self.filtered_table.verticalHeader().hide()
-        self.filtered_table.horizontalHeader().hide()
-
-        n_rows = len(data)
-        n_cols = len(data.columns)
-
-        self.filtered_table.setRowCount(n_rows + 1)  # +1 for column-label row
-        self.filtered_table.setColumnCount(n_cols + 1)
-
-        col_labels = [c.replace('.jpg', '').replace('.png', '') for c in data.columns]
-        header_font = QFont()
-        header_font.setBold(True)
-        header_font.setPointSize(9)
-
-        # Row 0: column label cells
-        corner = QTableWidgetItem("")
-        corner.setBackground(QBrush(QColor(44, 62, 80)))
-        corner.setFlags(Qt.ItemFlag.ItemIsEnabled)
-        self.filtered_table.setItem(0, 0, corner)
-        for j, label_text in enumerate(col_labels):
-            ch = QTableWidgetItem(label_text)
-            ch.setBackground(QBrush(QColor(44, 62, 80)))
-            ch.setForeground(QBrush(QColor(255, 255, 255)))
-            ch.setFont(header_font)
-            ch.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            ch.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.filtered_table.setItem(0, j + 1, ch)
-        self.filtered_table.setRowHeight(0, 28)
-
-        label_font = QFont()
-        label_font.setBold(True)
-        label_font.setPointSize(9)
-
-        for i, row_name in enumerate(data.index):
-            data_row = i + 1
-            display_name = row_name.replace('.jpg', '').replace('.png', '')
-            label_item = QTableWidgetItem(display_name)
-            label_item.setBackground(QBrush(QColor(232, 237, 242)))
-            label_item.setForeground(QBrush(QColor(44, 62, 80)))
-            label_item.setFont(label_font)
-            label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.filtered_table.setItem(data_row, 0, label_item)
-
-            for j, col_name in enumerate(data.columns):
-                value = data.iloc[i, j]
-                item = QTableWidgetItem(f"{value:.4f}")
-
-                if isinstance(value, (int, float)):
-                    if value >= 0.8:
-                        item.setBackground(QBrush(QColor(144, 238, 144)))
-                    elif value >= 0.6:
-                        item.setBackground(QBrush(QColor(255, 255, 224)))
-                    elif value >= 0.4:
-                        item.setBackground(QBrush(QColor(255, 218, 185)))
-                    else:
-                        item.setBackground(QBrush(QColor(255, 182, 193)))
-
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.filtered_table.setItem(data_row, j + 1, item)
-
-        fh = self.filtered_table.horizontalHeader()
-        fh.setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
-        fh.setDefaultSectionSize(72)
-        fh.setMinimumSectionSize(60)
-        fh.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-        self.filtered_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-
-    def update_filtered_stats(self, data, obj1, obj2):
-        """Update statistics for filtered data"""
-        values = data.values.flatten()
-
-        # Remove self-comparisons (1.0 values on diagonal if same object)
-        if obj1 == obj2 and obj1 != "All Objects":
-            mask = ~np.eye(len(data), dtype=bool).flatten()
-            values = values[mask]
-
-        if len(values) == 0:
-            self.filtered_stats_label.setText("No data to display")
-            return
-
-        mean_val = np.mean(values)
-        max_val = np.max(values)
-        min_val = np.min(values)
-        std_val = np.std(values)
-
-        comparison_text = f"{obj1} vs {obj2}" if obj1 != "All Objects" or obj2 != "All Objects" else "All Objects"
-
-        self.filtered_stats_label.setText(
-            f"<b>{comparison_text}</b> | "
-            f"Mean: {mean_val:.4f} | Max: {max_val:.4f} | Min: {min_val:.4f} | Std: {std_val:.4f} | "
-            f"Comparisons: {len(values)}"
-        )
-
-    def update_object_summary(self):
-        """Create summary table showing per-object statistics"""
-        if self.similarity_data is None or not self.object_groups:
-            return
-
-        objects = sorted(self.object_groups.keys(), key=lambda x: int(x.split()[1]))
-
-        # Hide Qt's vertical header — row labels become the first data column
-        self.summary_table.verticalHeader().hide()
-        sh_header = self.summary_table.horizontalHeader()
-        sh_header.setVisible(True)
-        sh_header.setMinimumHeight(26)
-
-        self.summary_table.setRowCount(len(objects))
-        self.summary_table.setColumnCount(len(objects) + 4)  # +1 label col, +3 intra-stats
-
-        headers = [""] + objects + ["Intra-Mean", "Intra-Min", "Intra-Max"]
-        header_font = QFont()
-        header_font.setBold(True)
-        header_font.setPointSize(9)
-        for j, text in enumerate(headers):
-            h_item = QTableWidgetItem(text)
-            h_item.setForeground(QBrush(QColor(44, 62, 80)))
-            h_item.setFont(header_font)
-            self.summary_table.setHorizontalHeaderItem(j, h_item)
-
-        label_font = QFont()
-        label_font.setBold(True)
-        label_font.setPointSize(9)
-
-        for i, obj1 in enumerate(objects):
-            rows = self.object_groups[obj1]
-
-            # Column 0: inline row label
-            label_item = QTableWidgetItem(obj1)
-            label_item.setBackground(QBrush(QColor(232, 237, 242)))
-            label_item.setForeground(QBrush(QColor(44, 62, 80)))
-            label_item.setFont(label_font)
-            label_item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-            label_item.setFlags(Qt.ItemFlag.ItemIsEnabled)
-            self.summary_table.setItem(i, 0, label_item)
-
-            # Intra-object statistics
-            intra_data = self.similarity_data.loc[rows, rows].values
-            np.fill_diagonal(intra_data, np.nan)
-            intra_mean = np.nanmean(intra_data)
-            intra_min = np.nanmin(intra_data)
-            intra_max = np.nanmax(intra_data)
-
-            for j, obj2 in enumerate(objects):
-                cols = self.object_groups[obj2]
-                subset = self.similarity_data.loc[rows, cols].values
-
-                if i == j:
-                    np.fill_diagonal(subset, np.nan)
-
-                mean_val = np.nanmean(subset)
-                item = QTableWidgetItem(f"{mean_val:.4f}")
-
-                if i == j:
-                    item.setBackground(QBrush(QColor(173, 216, 230)))
-                elif mean_val >= 0.6:
-                    item.setBackground(QBrush(QColor(255, 255, 224)))
-                elif mean_val >= 0.4:
-                    item.setBackground(QBrush(QColor(255, 218, 185)))
-                else:
-                    item.setBackground(QBrush(QColor(144, 238, 144)))
-
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.summary_table.setItem(i, j + 1, item)
-
-            # Add intra-object stats (after object columns)
-            for k, val in enumerate([intra_mean, intra_min, intra_max]):
-                item = QTableWidgetItem(f"{val:.4f}")
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                item.setBackground(QBrush(QColor(232, 240, 255)))
-                item.setForeground(QBrush(QColor(0, 0, 0)))
-                self.summary_table.setItem(i, len(objects) + 1 + k, item)
-
-        sh = self.summary_table.horizontalHeader()
-        sh.setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
-        self.summary_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
-
     def update_top_matches(self):
         """Update the top matches table based on current selection"""
         if self.similarity_data is None:
@@ -1236,11 +902,20 @@ class ResultsTab(QWidget):
         mh_header = self.matches_table.horizontalHeader()
         mh_header.setVisible(True)
         mh_header.setMinimumHeight(26)
+        self.matches_table.setStyleSheet("""
+            QHeaderView::section {
+                background-color: #e8edf2;
+                color: #2c3e50;
+                font-weight: bold;
+                padding: 4px 6px;
+                border: 1px solid #d1d5db;
+            }
+        """)
         self.matches_table.setRowCount(len(df_pairs))
-        self.matches_table.setColumnCount(4)
+        self.matches_table.setColumnCount(3)
         header_font = QFont()
         header_font.setBold(True)
-        for j, text in enumerate(['Image 1', 'Image 2', 'Similarity', 'Same Object']):
+        for j, text in enumerate(['Image 1', 'Image 2', 'Similarity']):
             h_item = QTableWidgetItem(text)
             h_item.setForeground(QBrush(QColor(44, 62, 80)))
             h_item.setFont(header_font)
@@ -1273,13 +948,6 @@ class ResultsTab(QWidget):
             sim_item.setForeground(QBrush(QColor(0, 0, 0)))
 
             self.matches_table.setItem(i, 2, sim_item)
-
-            same_obj_item = QTableWidgetItem("Yes" if row['Same Object'] else "No")
-            same_obj_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            if row['Same Object']:
-                same_obj_item.setBackground(QBrush(QColor(173, 216, 230)))
-            same_obj_item.setForeground(QBrush(QColor(0, 0, 0)))
-            self.matches_table.setItem(i, 3, same_obj_item)
 
         self.matches_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.matches_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)

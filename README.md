@@ -1,25 +1,26 @@
 # Image Processing App
 
-A modern, user-friendly image processing application built with PyQt5, featuring intuitive drag-and-drop functionality and a professional interface.
+A modern, cross-platform desktop application for image editing and CNN-based image similarity analysis, built with PySide6.
 
-![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)
-![PyQt5](https://img.shields.io/badge/PyQt5-5.15+-green.svg)
+![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
+![PySide6](https://img.shields.io/badge/PySide6-6.5+-green.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey.svg)
 
-## ✨ Features
+## Features
 
-- 🖱️ **Drag & Drop Support** - Simply drag images directly onto the application window
-- 📁 **Multiple Image Formats** - Supports PNG, JPG, JPEG, GIF, BMP, TIFF, WEBP
-- 🎨 **Modern UI** - Clean, professional interface with tabbed navigation
-- ⚡ **Instant Preview** - Real-time image display with auto-scaling
-- 🔄 **Easy Upload** - Traditional file dialog upload option
-- 🖼️ **Image Processing Ready** - Foundation built for future image analysis features
-- 🌐 **Cross-Platform** - Runs seamlessly on Windows, macOS, and Linux
+- **Drag & Drop Support** - Drag images directly onto the application window
+- **Multiple Image Formats** - Supports PNG, JPG, JPEG, GIF, BMP, TIFF, WEBP
+- **Image Editing** - Filters (blur, sharpen, emboss), brightness/contrast/saturation adjustments, undo/redo
+- **CNN-Based Analysis** - Extract visual features using VGG16 or ResNet50 and compute pairwise image similarity
+- **Results Visualization** - Similarity heatmaps and interactive CSV export
+- **Themes** - Light, Dark, and Forest themes
+- **Cross-Platform** - Runs on Windows, macOS, and Linux
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
-- Python 3.7 or higher
+
+- Python 3.10 or higher
 - pip (Python package manager)
 
 ### Installation
@@ -28,126 +29,130 @@ A modern, user-friendly image processing application built with PyQt5, featuring
    ```bash
    git clone https://github.com/CS26-17/Image-Processing-App.git
    cd Image-Processing-App
+   ```
 
 2. **Set up the environment**
 
-For macOS/Linux:
+   On macOS/Linux:
+   ```bash
+   chmod +x setup_dev_env.sh
+   ./setup_dev_env.sh
+   ```
 
-bash
-chmod +x setup_dev_env.sh
-./setup_dev_env.sh
+   On Windows:
+   ```bat
+   setup_dev_env.bat
+   ```
 
-For Windows:
+3. **Run the application**
+   ```bash
+   source .venv/bin/activate   # On Windows: .venv\Scripts\activate
+   python image_processing_app.py
+   ```
 
-bash
-setup_dev_env.bat
-Run the application
+### One-Command Launch
 
-bash
-python hello_world_app.py
-Manual Setup (Alternative)
-If you prefer to set up manually:
+These scripts create the virtual environment, install dependencies, and launch the app in a single step — no prior setup needed:
 
-bash
-# Create virtual environment
-python -m venv venv
+On macOS/Linux:
+```bash
+bash scripts/launch_mac_linux.sh
+```
 
-# Activate virtual environment
-# On macOS/Linux:
-source venv/bin/activate
-# On Windows:
-venv\Scripts\activate
+On Windows:
+```bat
+scripts\launch_windows.bat
+```
 
-# Install dependencies
+### Manual Setup
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate     # On Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+python image_processing_app.py
+```
 
-# Run the application
-python hello_world_app.py
-🎯 How to Use
-Launch the application
+## Packaging
 
-Upload an image using either:
+### macOS — Build a standalone `.app` bundle
 
-Drag & Drop: Drag any supported image file directly onto the application window
+First make sure the virtual environment exists (run `setup_dev_env.sh` if not):
 
-Upload Button: Click "Upload Image" to select a file through the file dialog
+```bash
+bash scripts/build_macos.sh
+```
 
-View your image in the preview area
+This script will:
+1. Activate the `.venv` virtual environment
+2. Install/upgrade PyInstaller
+3. Clean any previous `build/` and `dist/` directories
+4. Run PyInstaller using `image_processing_app.spec`
+5. Output the app bundle to `dist/Image Processing App.app`
 
-Use additional features through the tabbed interface:
+> **Note:** The build takes a few minutes due to the size of the PyTorch dependencies.
 
-Home: Main image upload and display
+**Optional: create a `.dmg` installer**
 
-Results: Processing results (future feature)
+If [`create-dmg`](https://github.com/create-dmg/create-dmg) is installed, the build script will automatically wrap the `.app` in a distributable DMG:
 
-Documentation: Application guides (future feature)
+```bash
+brew install create-dmg
+bash scripts/build_macos.sh
+# Output: dist/ImageProcessingApp.dmg
+```
 
-Modification: Image editing tools (future feature)
+## How to Use
 
-Analysis Setup: Configuration settings (future feature)
+1. Launch the application
+2. **Upload** images via drag-and-drop or the Upload button (Home tab)
+3. **Edit** images using filters and adjustments (Edit tab)
+4. **Analyze** a folder of images for similarity using VGG16 or ResNet50 (Analyze tab)
+5. **View results** as a heatmap and export similarity data as CSV (Results tab)
 
-🛠️ Technical Details
-Built With
-PyQt5 - Cross-platform GUI toolkit
+## Technical Details
 
-Python 3 - Backend logic and processing
+### Built With
 
-Pillow - Image processing capabilities
+- **PySide6** - Cross-platform Qt6 GUI framework
+- **PyTorch + torchvision** - Pre-trained CNN models (VGG16, ResNet50)
+- **Pillow** - Image I/O and processing
+- **NumPy / pandas** - Numerical computation and data handling
+- **matplotlib / seaborn** - Heatmap visualization
+- **scikit-learn** - Cosine similarity for feature vectors
+- **PyInstaller** - Standalone app packaging
 
-Project Structure
-text
-Image-Processing-App/
-├── hello_world_app.py    # Main application file
-├── requirements.txt      # Python dependencies
-├── setup_dev_env.sh     # macOS/Linux setup script
-├── setup_dev_env.bat    # Windows setup script
-├── README.md            # This file
-└── venv/                # Virtual environment (local, not in repo)
-Dependencies
-PyQt5 >= 5.15.0
+### Project Structure
 
-Pillow >= 10.0.0
+```
+image-processing-app/
+├── image_processing_app.py       # Main application entry point
+├── run_models.py                 # CNN feature extraction and similarity computation
+├── requirements.txt              # Runtime dependencies
+├── requirements-dev.txt          # Development dependencies
+├── image_processing_app.spec     # PyInstaller build spec
+├── setup_dev_env.sh              # Environment setup (macOS/Linux)
+├── setup_dev_env.bat             # Environment setup (Windows)
+├── scripts/
+│   ├── launch_mac_linux.sh       # One-command launch (macOS/Linux)
+│   ├── launch_windows.bat        # One-command launch (Windows)
+│   └── build_macos.sh            # Package as macOS .app / .dmg
+├── tabs/                         # Tab UI modules
+├── hooks/                        # PyInstaller runtime hooks
+├── tests/                        # Tests
+└── .venv/                        # Virtual environment (not in repo)
+```
 
-(Additional dependencies can be added in requirements.txt)
+### Code Architecture
 
-🎨 Interface Overview
-The application features a clean, tabbed interface:
+- MVC-inspired pattern with a modular tab-based structure
+- Event-driven design using Qt signals/slots
+- CNN analysis runs in a subprocess to keep the UI responsive
 
-Home Tab: Primary workspace for image upload and display
+## Contributing
 
-Visual Feedback: Clear status messages and drag-drop indicators
+Pull requests and issues are welcome.
 
-Responsive Design: Adapts to different screen sizes
+## License
 
-Professional Styling: Modern color scheme and intuitive layout
-
-🔧 Development
-Adding New Features
-The modular code structure makes it easy to extend functionality:
-
-New image processing features can be added to the existing methods
-
-Additional tabs can be implemented following the existing pattern
-
-UI enhancements can be made through the Qt stylesheet system
-
-Code Architecture
-MVC-inspired pattern with separation of concerns
-
-Event-driven design for responsive user interactions
-
-Comprehensive error handling for robust operation
-
-🤝 Contributing
-We welcome contributions! Please feel free to submit pull requests or open issues for bugs and feature requests.
-
-📝 License
 This project is open source and available under the MIT License.
-
-🙏 Acknowledgments
-Built with PyQt5 for the GUI framework
-
-Icons and emojis used for enhanced user experience
-
-Inspired by modern image processing applications
-
