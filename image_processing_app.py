@@ -1,12 +1,8 @@
 import multiprocessing
 import sys
-# Import heavy scientific packages before PySide6 to prevent shibokensupport
-# from intercepting the six.moves import chain (known PySide6 + six conflict).
-# run_models pulls in seaborn → matplotlib → dateutil → six.moves, which must
-# all be resolved before shibokensupport patches the import system.
 import pandas
 import numpy
-import run_models  # noqa: F401
+import run_models
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout,
     QWidget, QLabel, QTabWidget, QComboBox
