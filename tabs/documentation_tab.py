@@ -130,6 +130,34 @@ class DocumentationTab(QWidget):
                 background-color: #eaf2ff;
                 color: #102a43;
             }
+            QScrollBar:vertical {
+                background-color: #ffffff;
+                width: 18px;
+                border: 1px solid #000000;
+                margin: 20px 0 20px 0;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #000000;
+                min-height: 40px;
+                border: 1px solid #000000;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #222222;
+            }
+            QScrollBar::sub-line:vertical,
+            QScrollBar::add-line:vertical {
+                background-color: #ffffff;
+                height: 20px;
+                border: 1px solid #000000;
+            }
+            QScrollBar::sub-line:vertical:hover,
+            QScrollBar::add-line:vertical:hover {
+                background-color: #e6e6e6;
+            }
+            QScrollBar::sub-page:vertical,
+            QScrollBar::add-page:vertical {
+                background: #ffffff;
+            }
         """)
         
         # Add navigation items
@@ -263,6 +291,34 @@ class DocumentationTab(QWidget):
             }
             QTextBrowser th, QTextBrowser td {
                 color: #102a43;
+            }
+            QScrollBar:vertical {
+                background-color: #ffffff;
+                width: 18px;
+                border: 1px solid #000000;
+                margin: 20px 0 20px 0;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #000000;
+                min-height: 40px;
+                border: 1px solid #000000;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #222222;
+            }
+            QScrollBar::sub-line:vertical,
+            QScrollBar::add-line:vertical {
+                background-color: #ffffff;
+                height: 20px;
+                border: 1px solid #000000;
+            }
+            QScrollBar::sub-line:vertical:hover,
+            QScrollBar::add-line:vertical:hover {
+                background-color: #e6e6e6;
+            }
+            QScrollBar::sub-page:vertical,
+            QScrollBar::add-page:vertical {
+                background: #ffffff;
             }
         """)
         self.content_browser.setMinimumWidth(650)
