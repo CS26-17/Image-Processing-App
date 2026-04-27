@@ -5,7 +5,7 @@ import pandas
 import numpy
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QVBoxLayout,
-    QWidget, QLabel, QTabWidget, QComboBox
+    QWidget, QLabel, QTabWidget, QComboBox, QTabBar
 )
 from PySide6.QtCore import Qt
 
@@ -14,6 +14,13 @@ from tabs.results_tab import ResultsTab
 from tabs.documentation_tab import DocumentationTab
 from tabs.home_tab import HomeTab
 from tabs.analysis_setup_tab import AnalysisSetupTab
+
+
+class NoWheelTabBar(QTabBar):
+    """Prevent mouse-wheel scrolling from changing the active tab."""
+
+    def wheelEvent(self, event):
+        event.ignore()
 
 
 
@@ -71,6 +78,7 @@ class ImageProcessingApp(QMainWindow):
 
         # Central tab widget
         self.tab_widget = QTabWidget()
+        self.tab_widget.setTabBar(NoWheelTabBar())
         self.tab_widget.setMovable(True)
         self.setCentralWidget(self.tab_widget)
 
