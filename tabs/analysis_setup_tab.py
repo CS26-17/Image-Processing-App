@@ -5,9 +5,9 @@ Analysis Setup Tab - Configure analysis parameters and settings
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                                QPushButton, QLineEdit, QButtonGroup, QFileDialog,
                                QFrame, QProgressBar, QToolTip)
-from PySide6.QtCore import Qt, Signal, QPoint, QProcess, QProcessEnvironment
+from PySide6.QtCore import Qt, Signal, QPoint, QTimer
+import multiprocessing
 import os
-import sys
  
 class AnalysisSetupTab(QWidget):
     """
@@ -20,52 +20,11 @@ class AnalysisSetupTab(QWidget):
         super().__init__(parent)
         self.selected_folder = ""
         self.selected_model = None
-        self.process = None
-        self._stderr_buffer = []
+        self._worker_process = None
+        self._progress_queue = None
+        self._poll_timer = None
         self.setup_ui()
     
-    def get_project_root(self):
-        """
-        Returns the project root directory.
-        """
-        return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
- 
-    def get_python_executable(self):
-        """
-        Returns the path to the venv Python interpreter in the project root.
-        Falls back to sys.executable and surfaces a warning in the status label
-        so it is obvious when the venv is not being used.
-        """
-        project_root = self.get_project_root()
- 
-        if sys.platform == "win32":
-            venv_python = os.path.join(project_root, ".venv", "Scripts", "python.exe")
-        else:
-            venv_python = os.path.join(project_root, ".venv", "bin", "python")
- 
-        if os.path.isfile(venv_python):
-            return venv_python
- 
-        # Venv not found - warn the user so they know why packages may be missing
-        self.status_label.setText(
-            f"Warning: .venv not found in {project_root}. "
-            "Run the launch script first to create it."
-        )
-        return sys.executable
- 
-    def get_script_path(self):
-        """
-        Returns the absolute path to run_models.py (project root).
-        """
-        project_root = self.get_project_root()
-        script = os.path.join(project_root, "run_models.py")
-        if not os.path.isfile(script):
-            raise FileNotFoundError(
-                f"run_models.py not found at: {script}\n"
-                "Make sure run_models.py is in the project root folder."
-            )
-        return script
- 
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
@@ -373,10 +332,7 @@ class AnalysisSetupTab(QWidget):
     def on_apply(self):
         # Validate inputs
         if not self.selected_folder:
-            self.status_label.setText("Please select and image folder")
-            return
-        if not (self.vg_button.isChecked() or self.res_button.isChecked()):
-            self.status_label.setText("Please select model")
+            self.status_label.setText("Please select an image folder")
             return
         if not (self.vg_button.isChecked() or self.res_button.isChecked()):
             self.status_label.setText("Please select a model")
@@ -386,85 +342,59 @@ class AnalysisSetupTab(QWidget):
         if not name:
             self.status_label.setText("Please enter a result name")
             return
- 
+
         # Results go into a "results" subfolder inside the chosen image folder
         self.output_dir = os.path.join(self.selected_folder, "results")
-        output_dir = self.output_dir
-        os.makedirs(output_dir, exist_ok=True)
- 
+        os.makedirs(self.output_dir, exist_ok=True)
+
         self.status_label.setText("Running analysis...")
         self.apply_button.setEnabled(False)
         self.progress_bar.setVisible(True)
         self.progress_bar.setValue(0)
-        self._stderr_buffer = []
- 
-        # Run run_models.py with the venv Python interpreter
-        python = self.get_python_executable()
-        try:
-            script = self.get_script_path()
-        except FileNotFoundError as e:
-            self.apply_button.setEnabled(True)
-            self.progress_bar.setVisible(False)
-            self.status_label.setText(str(e))
-            return
- 
-        self.process = QProcess(self)
-        self.process.readyReadStandardOutput.connect(self.handle_output)
-        self.process.readyReadStandardError.connect(self.handle_error)
-        self.process.finished.connect(self.on_analysis_finished)
- 
-        env = QProcessEnvironment.systemEnvironment()
-        env.insert("OUTPUT_DIR", output_dir)
-        self.process.setProcessEnvironment(env)
- 
-        self.process.start(
-            python,
-            [
-                script,
-                "--model", model,
-                "--folder", self.selected_folder,
-                "--name", name,
-            ]
+
+        # Lazy import so torch doesn't load until analysis actually runs
+        from run_models import run_cnn_analysis_worker
+
+        self._progress_queue = multiprocessing.Queue()
+        self._worker_process = multiprocessing.Process(
+            target=run_cnn_analysis_worker,
+            args=(model, self.selected_folder, name, self.output_dir, self._progress_queue),
+            daemon=True,
         )
- 
-    def handle_output(self):
-        data = self.process.readAllStandardOutput().data().decode()
-        for line in data.splitlines():
-            if line.startswith("PROGRESS:"):
-                try:
-                    value = int(line.split(":")[1])
+        self._worker_process.start()
+
+        self._poll_timer = QTimer(self)
+        self._poll_timer.timeout.connect(self._poll_queue)
+        self._poll_timer.start(100)  # check for updates every 100 ms
+
+    def _poll_queue(self):
+        """Drain the inter-process queue and update UI accordingly."""
+        import queue as _queue
+        try:
+            while True:
+                msg_type, value = self._progress_queue.get_nowait()
+                if msg_type == "PROGRESS":
                     self.progress_bar.setValue(value)
-                except ValueError:
-                    pass
- 
-    def handle_error(self):
-        """Buffer stderr - tqdm and torchvision write harmless progress to stderr.
-        We only surface it in the UI if the process actually fails."""
-        err = self.process.readAllStandardError().data().decode().strip()
-        if err:
-            self._stderr_buffer.append(err)
- 
-    def on_analysis_finished(self, exit_code, exit_status):
+                elif msg_type == "DONE":
+                    self._finish_analysis(success=True, detail=value)
+                    return
+                elif msg_type == "ERROR":
+                    self._finish_analysis(success=False, detail=value)
+                    return
+        except _queue.Empty:
+            pass
+
+        # Guard against the worker dying without sending a message
+        if self._worker_process and not self._worker_process.is_alive():
+            self._finish_analysis(success=False, detail="Worker process exited unexpectedly.")
+
+    def _finish_analysis(self, success: bool, detail: str):
+        self._poll_timer.stop()
         self.apply_button.setEnabled(True)
-        if exit_code == 0:
+        if success:
             self.progress_bar.setValue(100)
             self.status_label.setText("Analysis complete! Results saved to folder.")
-            self.analysis_complete.emit(self.output_dir)
+            self.analysis_complete.emit(detail)
         else:
             self.progress_bar.setVisible(False)
-            # Show the last meaningful stderr line (filter out tqdm noise)
-            error_detail = ""
-            if self._stderr_buffer:
-                meaningful = [
-                    ln for ln in "\n".join(self._stderr_buffer).splitlines()
-                    if ln.strip() and "\r" not in ln and "%|" not in ln
-                ]
-                if meaningful:
-                    error_detail = meaningful[-1]
-            if error_detail:
-                self.status_label.setText(f"Analysis failed: {error_detail}")
-            else:
-                self.status_label.setText(
-                    f"Analysis failed (exit code {exit_code}). "
-                    "Check that your image folder contains supported images."
-                )
+            self.status_label.setText(f"Analysis failed: {detail}")

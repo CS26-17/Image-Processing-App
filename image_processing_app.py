@@ -1,8 +1,8 @@
+import multiprocessing
 import sys
-# Import pandas/numpy before PySide6 to prevent shibokensupport from
-# intercepting the six.moves import chain (known PySide6 + six conflict).
 import pandas
 import numpy
+import run_models
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QTabWidget, QTabBar
 )
@@ -169,6 +169,10 @@ class ImageProcessingApp(QMainWindow):
 
 def main() -> None:
     """Entry point for the application."""
+    # Required for multiprocessing to work correctly in frozen/packaged builds
+    # (PyInstaller on Windows). Must be called before any other code in main.
+    multiprocessing.freeze_support()
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
 
