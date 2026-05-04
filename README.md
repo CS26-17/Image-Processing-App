@@ -102,6 +102,36 @@ bash scripts/build_macos.sh
 # Output: dist/ImageProcessingApp.dmg
 ```
 
+### Windows — Build a standalone executable folder
+
+First make sure the virtual environment exists (run `setup_dev_env.bat` if not):
+
+1. **Activate the environment and install PyInstaller**
+   ```bat
+   venv\Scripts\activate
+   pip install pyinstaller
+   ```
+
+2. **Run the build**
+   ```bat
+   pyinstaller image_processing_app.spec
+   ```
+
+This will:
+1. Collect all dependencies (PyTorch, PySide6, etc.) into a single folder
+2. Output the distributable to `dist\Image Processing App\`
+
+> **Note:** The build takes a few minutes due to the size of the PyTorch dependencies.
+
+**To run the built app:**
+```bat
+"dist\Image Processing App\Image Processing App.exe"
+```
+
+**To distribute:** zip up the entire `dist\Image Processing App\` folder and share it. The recipient does not need Python installed.
+
+> **Optional:** wrap the folder in an installer using a tool like [Inno Setup](https://jrsoftware.org/isinfo.php) or [NSIS](https://nsis.sourceforge.io/) for a polished `.exe` installer.
+
 ## How to Use
 
 1. Launch the application
