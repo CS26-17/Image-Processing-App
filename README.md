@@ -42,6 +42,7 @@ A modern, cross-platform desktop application for image editing and CNN-based ima
    On Windows:
    ```bat
    setup_dev_env.bat
+   .\setup_dev_env.bat
    ```
 
 3. **Run the application**
